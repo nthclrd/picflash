@@ -15,7 +15,6 @@ from fanout import fanout
 HW = Path(__file__).resolve().parent.parent
 FPDIR = "/Applications/KiCad/KiCad.app/Contents/SharedSupport/footprints"
 OUT = HW / "picflash-board.kicad_pcb"
-ROOT = "5f1c0b52"  # unused: footprints are linked by symbol uuid below
 
 W, H = 72.0, 44.0           # board size, mm
 OX, OY = 100.0, 100.0       # board origin on the sheet
@@ -184,7 +183,7 @@ def main():
                 for pd in fps[ref].Pads() if pd.GetNetname() and pd.GetNetname() not in GLOBAL]
         return (b[0] - OX, b[1] - OY, b[2] - OX, b[3] - OY), pads
 
-    halos = [(b[0] - d, b[1] - d, b[2] + d, b[3] + d) for r, b in boxes for h, d in HALO.items() if r == h]
+    halos = [(b[0] - HALO[r], b[1] - HALO[r], b[2] + HALO[r], b[3] + HALO[r]) for r, b in boxes if r in HALO]
     unplaced = []
     todo = [r for r in parts if r not in placed]
     while todo:
@@ -231,12 +230,11 @@ def main():
     (HW / "build").mkdir(exist_ok=True)
     (HW / "build" / "fanout.json").write_text(json.dumps(fanout(board, OX, OY, W, H)))
 
-    # Planes: GND on In1, +3V3 on In2, GND pours on the outer layers.
-    # Outer GND pours are added after routing (finish_pcb.py): Freerouting
-    # would treat them as obstacles.
-    for layer, net, prio in [(pcbnew.In1_Cu, "GND", 0), (pcbnew.In2_Cu, "+3V3", 0)]:
+    # Planes: GND on In1, +3V3 on In2. The outer GND pours come after routing
+    # (finish_pcb.py): Freerouting would treat them as obstacles.
+    for layer, net in [(pcbnew.In1_Cu, "GND"), (pcbnew.In2_Cu, "+3V3")]:
         z = pcbnew.ZONE(board)
-        z.SetLayer(layer); z.SetNet(nets[net]); z.SetAssignedPriority(prio)
+        z.SetLayer(layer); z.SetNet(nets[net]); z.SetAssignedPriority(0)
         z.SetLocalClearance(mm(0.25)); z.SetMinThickness(mm(0.2))
         z.SetPadConnection(pcbnew.ZONE_CONNECTION_THERMAL)
         ol = z.Outline(); ol.NewOutline()
@@ -246,7 +244,6 @@ def main():
 
     board.SetFileName(str(OUT))
     pcbnew.SaveBoard(str(OUT), board)
-    (HW / "build").mkdir(exist_ok=True)
     assert pcbnew.ExportSpecctraDSN(board, str(HW / "build" / "picflash-board.dsn"))
     print(f"{OUT.name}: {len(fps) - len(unplaced)} empreintes placées, hors carte : {unplaced}")
 
