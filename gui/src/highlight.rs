@@ -1,7 +1,7 @@
 //! Syntax colors for PIC16 assembly, shared by the disassembly and the
 //! assembly source views.
 
-use eframe::egui::{text::LayoutJob, Color32, FontId, TextFormat};
+use eframe::egui::{self, text::LayoutJob, Color32, FontId, RichText, TextFormat};
 
 pub const BRANCH: Color32 = Color32::from_rgb(232, 120, 160);
 pub const SKIP: Color32 = Color32::from_rgb(235, 180, 70);
@@ -102,4 +102,17 @@ pub fn line(source: &str, font: &FontId, text: Color32, dim: Color32) -> LayoutJ
         push(&mut job, comment, font, COMMENT);
     }
     job
+}
+
+/// The 120 px label column (`name:`) of the disassembly and debugger rows.
+pub fn label_column(ui: &mut egui::Ui, label: Option<&str>, row_height: f32) {
+    let label = label.map_or(String::new(), |l| format!("{l}:"));
+    ui.allocate_ui_with_layout(
+        egui::vec2(120.0, row_height),
+        egui::Layout::left_to_right(egui::Align::Center),
+        |ui| {
+            ui.set_min_width(120.0);
+            ui.label(RichText::new(label).monospace().color(LABEL));
+        },
+    );
 }

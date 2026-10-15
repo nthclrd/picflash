@@ -179,7 +179,6 @@ struct App {
     part: String,
     device: Option<Device>,
     parts: Vec<String>,
-    parts_loading: bool,
     target: Target,
     /// Empty means auto-detect by USB ID.
     port: String,
@@ -234,7 +233,6 @@ impl App {
             part,
             device: None,
             parts: Vec::new(),
-            parts_loading: true,
             target: Target::Simulator,
             port: String::new(),
             ports: Vec::new(),
@@ -277,7 +275,7 @@ impl App {
         app.watch_tools();
         app.load_device();
         app.scan_parts();
-        app.info(format!("assembleur intégré, {} puces embarquées", Database::embedded().parts.len()));
+        app.info(format!("assembleur intégré, {} puces embarquées", app.parts.len()));
         app
     }
 
@@ -401,19 +399,12 @@ impl App {
 
     /// Lists the parts of the embedded database.
     fn scan_parts(&mut self) {
-        let mut names: Vec<String> = Database::embedded().parts.iter().map(|d| d.name.clone()).collect();
-        names.sort();
-        self.parts = names;
-        self.parts_loading = false;
+        self.parts = Database::embedded().parts.iter().map(|d| d.name.clone()).collect();
+        self.parts.sort();
     }
 
     fn refresh_ports(&mut self) {
-        self.ports = serialport::available_ports()
-            .unwrap_or_default()
-            .into_iter()
-            .map(|p| p.port_name)
-            .filter(|n| !n.contains("/tty."))
-            .collect();
+        self.ports = serial_ports();
         self.boards = picflash::transport::board_ports();
         self.kits = pickit::scan();
     }
@@ -423,13 +414,7 @@ impl App {
         let (tx, ctx) = (self.tx.clone(), self.ctx.clone());
         thread::spawn(move || loop {
             thread::sleep(std::time::Duration::from_secs(2));
-            let ports = serialport::available_ports()
-                .unwrap_or_default()
-                .into_iter()
-                .map(|p| p.port_name)
-                .filter(|n| !n.contains("/tty."))
-                .collect();
-            let msg = Msg::Tools { ports, boards: picflash::transport::board_ports(), kits: pickit::scan() };
+            let msg = Msg::Tools { ports: serial_ports(), boards: picflash::transport::board_ports(), kits: pickit::scan() };
             if tx.send(msg).is_err() {
                 break;
             }
@@ -514,7 +499,6 @@ impl App {
         let sim = self.sim.clone();
         let image = self.image.clone();
         let target = self.target;
-        let port = (!self.port.is_empty()).then(|| self.port.clone());
         let opts = JobOpts {
             verify_after: self.verify_after,
             allow_lvp_off: self.allow_lvp_off,
@@ -524,7 +508,8 @@ impl App {
         let tool_opts = tool::Options {
             entry: self.entry.entry(),
             power_mv: self.power.then(|| (self.power_volts * 1000.0).round() as u16),
-            port: None,
+            // Only the board takes a port; the PICkit is found by USB.
+            port: (target == Target::Board && !self.port.is_empty()).then(|| self.port.clone()),
         };
         self.info(format!("{}…", job.label()));
         thread::spawn(move || {
@@ -548,19 +533,14 @@ impl App {
                         None => Err(anyhow::anyhow!("pas de simulateur pour cette puce")),
                     }
                 }
-                Target::Board => {
-                    let tool_opts = tool::Options { port: port.clone(), ..tool_opts.clone() };
-                    tool::open(Choice::Board, &device, &tool_opts).and_then(|o| {
+                Target::Board | Target::PicKit => {
+                    let choice = if target == Target::Board { Choice::Board } else { Choice::PicKit };
+                    tool::open(choice, &device, &tool_opts).and_then(|o| {
                         send(Level::Info, o.summary);
                         let mut link = o.link;
                         run_job(job, &mut link, o.entry, &device, image.as_ref(), opts, &tx)
                     })
                 }
-                Target::PicKit => tool::open(Choice::PicKit, &device, &tool_opts).and_then(|o| {
-                    send(Level::Info, o.summary);
-                    let mut link = o.link;
-                    run_job(job, &mut link, o.entry, &device, image.as_ref(), opts, &tx)
-                }),
             };
             if let Err(e) = result {
                 send(Level::Error, format!("{e:#}"));
@@ -581,10 +561,12 @@ impl App {
                     self.boards = boards;
                     self.kits = kits;
                     // Follow a programmer that was just plugged in, unless busy.
-                    if !self.busy && fresh_board {
-                        self.target = Target::Board;
-                    } else if !self.busy && fresh_kit && self.target != Target::Board {
-                        self.target = Target::PicKit;
+                    if !self.busy {
+                        if fresh_board {
+                            self.target = Target::Board;
+                        } else if fresh_kit && self.target != Target::Board {
+                            self.target = Target::PicKit;
+                        }
                     }
                 }
                 Msg::Ids(ids) => self.ids = Some(ids),
@@ -600,6 +582,21 @@ impl App {
             }
         }
     }
+}
+
+/// Serial ports, without the macOS `/dev/tty.*` duplicates of `/dev/cu.*`.
+fn serial_ports() -> Vec<String> {
+    serialport::available_ports()
+        .unwrap_or_default()
+        .into_iter()
+        .map(|p| p.port_name)
+        .filter(|n| !n.contains("/tty."))
+        .collect()
+}
+
+/// The connected chip's ID matches the loaded part (or the part has no ID).
+fn id_matches(device: &Device, ids: Ids) -> bool {
+    device.device_id_mask == 0 || ids.device_id & device.device_id_mask == device.device_id
 }
 
 fn run_job(
@@ -622,9 +619,7 @@ fn run_job(
         Job::Id => {
             let ids = prog.read_ids()?;
             let _ = tx.send(Msg::Ids(ids));
-            let matches = device.device_id_mask == 0
-                || ids.device_id & device.device_id_mask == device.device_id;
-            let (level, what) = if matches {
+            let (level, what) = if id_matches(device, ids) {
                 (Level::Ok, device.name.as_str())
             } else {
                 (Level::Error, "puce inattendue")
@@ -747,15 +742,7 @@ fn asm_view(ui: &mut egui::Ui, lines: &[Line], other: Option<&Image>) {
                     let head = RichText::new(head).monospace();
                     ui.label(if differs { head.color(RED) } else { head.color(dim) })
                         .on_hover_text(if differs { "différent de l'autre vue" } else { "" });
-                    let label = line.label.as_deref().map_or(String::new(), |l| format!("{l}:"));
-                    ui.allocate_ui_with_layout(
-                        egui::vec2(120.0, row_height),
-                        egui::Layout::left_to_right(egui::Align::Center),
-                        |ui| {
-                            ui.set_min_width(120.0);
-                            ui.label(RichText::new(label).monospace().color(highlight::LABEL));
-                        },
-                    );
+                    highlight::label_column(ui, line.label.as_deref(), row_height);
                     ui.label(highlight::line(&line.text, &font, text, dim));
                 });
             }
@@ -857,11 +844,7 @@ impl App {
                 self.part = self.part.trim().to_ascii_uppercase();
                 self.load_device();
             }
-            let label = if self.parts_loading {
-                "chargement…".to_owned()
-            } else {
-                format!("{} supportées", self.parts.len())
-            };
+            let label = format!("{} supportées", self.parts.len());
             let mut picked = None;
             egui::ComboBox::from_id_salt("parts")
                 .selected_text(label)
@@ -895,8 +878,8 @@ impl App {
                 let shown = if self.port.is_empty() { "auto".to_owned() } else { self.port.clone() };
                 egui::ComboBox::from_id_salt("port").selected_text(shown).show_ui(ui, |ui| {
                     ui.selectable_value(&mut self.port, String::new(), "auto (1209:0001)");
-                    for p in self.ports.clone() {
-                        ui.selectable_value(&mut self.port, p.clone(), p);
+                    for p in &self.ports {
+                        ui.selectable_value(&mut self.port, p.clone(), p.as_str());
                     }
                 });
                 if ui.button("↻").on_hover_text("Rafraîchir les ports").clicked() {
@@ -922,46 +905,44 @@ impl App {
             ui.painter().circle_filled(rect.center(), 5.0, dot);
             response.on_hover_text(&tip);
             if self.target == Target::PicKit {
-                ui.label(egui::RichText::new(match kit {
+                ui.label(RichText::new(match kit {
                     Some(k) => k.kind.name().to_owned(),
                     None => "non détecté".to_owned(),
                 }).weak());
             }
         });
 
-        {
-            ui.horizontal(|ui| {
-                ui.label("Entrée");
-                let shown = match self.entry {
-                    EntryChoice::Auto => "auto",
-                    EntryChoice::Low => "basse tension (LVP)",
-                    EntryChoice::High => "haute tension (VPP)",
-                };
-                egui::ComboBox::from_id_salt("entry").selected_text(shown).show_ui(ui, |ui| {
-                    ui.selectable_value(&mut self.entry, EntryChoice::Auto, "auto")
-                        .on_hover_text("Haute tension sur carte picflash et PICkit 4/5 (comme MPLAB IPE), basse tension sinon");
-                    ui.selectable_value(&mut self.entry, EntryChoice::Low, "basse tension (LVP)")
-                        .on_hover_text("Clé « MCHP », MCLR à 0 V : demande LVP = ON dans la config");
-                    ui.selectable_value(&mut self.entry, EntryChoice::High, "haute tension (VPP)")
-                        .on_hover_text("MCLR à VPP (9 V pour PIC16F1xxx) : marche même si LVP = OFF (carte picflash, PICkit 4/5)");
-                });
-                if matches!(self.target, Target::PicKit | Target::Board) {
-                    ui.separator();
-                    ui.checkbox(&mut self.power, "Alimenter la cible")
-                        .on_hover_text("L'outil fournit VDD ; laisse décoché si la carte cible a sa propre alimentation");
-                    ui.add_enabled_ui(self.power, |ui| {
-                        egui::ComboBox::from_id_salt("vdd")
-                            .selected_text(format!("{:.1} V", self.power_volts))
-                            .show_ui(ui, |ui| {
-                                let max = if self.target == Target::Board { 4.8f32 } else { 5.0 };
-                                for v in [1.8f32, 3.3, max] {
-                                    ui.selectable_value(&mut self.power_volts, v, format!("{v:.1} V"));
-                                }
-                            });
-                    });
-                }
+        ui.horizontal(|ui| {
+            ui.label("Entrée");
+            let shown = match self.entry {
+                EntryChoice::Auto => "auto",
+                EntryChoice::Low => "basse tension (LVP)",
+                EntryChoice::High => "haute tension (VPP)",
+            };
+            egui::ComboBox::from_id_salt("entry").selected_text(shown).show_ui(ui, |ui| {
+                ui.selectable_value(&mut self.entry, EntryChoice::Auto, "auto")
+                    .on_hover_text("Haute tension sur carte picflash et PICkit 4/5 (comme MPLAB IPE), basse tension sinon");
+                ui.selectable_value(&mut self.entry, EntryChoice::Low, "basse tension (LVP)")
+                    .on_hover_text("Clé « MCHP », MCLR à 0 V : demande LVP = ON dans la config");
+                ui.selectable_value(&mut self.entry, EntryChoice::High, "haute tension (VPP)")
+                    .on_hover_text("MCLR à VPP (9 V pour PIC16F1xxx) : marche même si LVP = OFF (carte picflash, PICkit 4/5)");
             });
-        }
+            if matches!(self.target, Target::PicKit | Target::Board) {
+                ui.separator();
+                ui.checkbox(&mut self.power, "Alimenter la cible")
+                    .on_hover_text("L'outil fournit VDD ; laisse décoché si la carte cible a sa propre alimentation");
+                ui.add_enabled_ui(self.power, |ui| {
+                    egui::ComboBox::from_id_salt("vdd")
+                        .selected_text(format!("{:.1} V", self.power_volts))
+                        .show_ui(ui, |ui| {
+                            let max = if self.target == Target::Board { 4.8f32 } else { 5.0 };
+                            for v in [1.8f32, 3.3, max] {
+                                ui.selectable_value(&mut self.power_volts, v, format!("{v:.1} V"));
+                            }
+                        });
+                });
+            }
+        });
 
         ui.horizontal(|ui| {
             ui.label("ASM  ");
@@ -1119,8 +1100,7 @@ impl App {
             ui.strong("Puce connectée");
             match self.ids {
                 Some(ids) => {
-                    let ok = d.device_id_mask == 0
-                        || ids.device_id & d.device_id_mask == d.device_id;
+                    let ok = id_matches(d, ids);
                     let text = format!("ID {:#06x}  rév {:#06x}", ids.device_id, ids.revision_id);
                     ui.label(RichText::new(text).monospace().color(if ok { GREEN } else { RED }));
                 }
