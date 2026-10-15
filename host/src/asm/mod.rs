@@ -12,7 +12,7 @@ mod expr;
 mod link;
 mod pre;
 
-use std::collections::{BTreeMap, HashMap};
+use std::collections::{BTreeMap, HashMap, HashSet};
 use std::path::Path;
 use std::rc::Rc;
 
@@ -23,8 +23,8 @@ use crate::device::Device;
 use crate::image::Image;
 use crate::toolchain::Diagnostic;
 use expr::{is_ident_char, is_ident_start, Env, Expr};
-use link::{Placement, Psect};
-use pre::{split_args, Item, Preprocessor};
+use link::Psect;
+use pre::{replace_words, split_args, Cond, Item, Preprocessor};
 
 /// Source position for diagnostics.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -135,11 +135,10 @@ pub fn assemble(path: &Path, text: &str, options: &Options) -> Assembly {
     let mut pre = Preprocessor::new(device);
     pre.run(path, text, 0);
     let mut asm = Assembler::new(device, options, text);
-    for (loc, msg, error) in std::mem::take(&mut pre.errors) {
+    for (loc, msg, error) in pre.errors {
         asm.diag(&loc, msg, error);
     }
-    let lines: Vec<Item> = std::mem::take(&mut pre.items);
-    asm.block(&lines, 0);
+    asm.block(&pre.items, 0);
     asm.finish()
 }
 
@@ -175,17 +174,11 @@ struct MacroDef {
     body: Vec<Item>,
 }
 
-struct Cond {
-    active: bool,
-    taken: bool,
-    outer: bool,
-}
-
 struct Assembler<'a> {
     device: &'a Device,
     symbols: HashMap<String, SymDef>,
-    /// Upper-cased names declared as SET: substituted at use.
-    set_names: HashMap<String, ()>,
+    /// Names declared with SET: substituted at use.
+    set_names: HashSet<String>,
     psects: Vec<Psect>,
     current: Option<usize>,
     stmts: Vec<Stmt>,
@@ -219,25 +212,36 @@ fn is_ident(s: &str) -> bool {
     chars.next().is_some_and(is_ident_start) && chars.all(is_ident_char)
 }
 
+/// Splits a leading `label:` off a line.
+fn take_label(text: &str) -> (Option<String>, &str) {
+    let t = text.trim_start();
+    let end = t.find(|c: char| !is_ident_char(c)).unwrap_or(t.len());
+    if end > 0 && t.starts_with(is_ident_start) && t[end..].starts_with(':') && !t[end..].starts_with("::") {
+        return (Some(t[..end].to_owned()), t[end + 1..].trim_start());
+    }
+    (None, t)
+}
+
+/// True if the line opens a body closed by ENDM (both words upper-cased).
+fn opens_body(word: &str, second: &str) -> bool {
+    second == "MACRO" || word == "REPT" || word == "IRP" || word == "IRPC"
+}
+
 impl<'a> Assembler<'a> {
     fn new(device: &'a Device, options: &Options, source: &str) -> Self {
         let mut placements = options.placements.clone();
+        let vectors = crate::toolchain::vector_options(source);
         for (name, addr) in [("reset_vec", 0u32), ("isr_vec", 4)] {
-            let declared = crate::toolchain::vector_options(source)
-                .iter()
-                .any(|o| o.contains(&format!("-p{name}=")));
+            let declared = vectors.iter().any(|o| o.contains(&format!("-p{name}=")));
             if declared && !placements.iter().any(|(n, _)| n == name) {
                 placements.push((name.to_owned(), addr));
             }
         }
-        let mut config = BTreeMap::new();
-        for word in &device.config {
-            config.insert(word.address, word.default);
-        }
+        let config = device.config.iter().map(|word| (word.address, word.default)).collect();
         Self {
             device,
             symbols: HashMap::new(),
-            set_names: HashMap::new(),
+            set_names: HashSet::new(),
             psects: Vec::new(),
             current: None,
             stmts: Vec::new(),
@@ -265,6 +269,16 @@ impl<'a> Assembler<'a> {
         self.diag(loc, msg, true);
     }
 
+    /// Error with no source position (linker, unclosed IF).
+    fn err_global(&mut self, message: String) {
+        self.diagnostics.push(Diagnostic { file: String::new(), line: None, error: true, message });
+    }
+
+    /// True outside IF blocks and in their taken branch.
+    fn active(&self) -> bool {
+        self.conds.last().is_none_or(|c| c.active)
+    }
+
     fn wide_bsr(&self) -> bool {
         self.device.data_end > 0x1000
     }
@@ -279,87 +293,84 @@ impl<'a> Assembler<'a> {
             }
             let (loc, text) = match &items[i] {
                 Item::DeviceHeader { loc } => {
-                    if self.conds.last().is_none_or(|c| c.active) {
+                    if self.active() {
                         self.device_header(loc);
                     }
                     i += 1;
                     continue;
                 }
-                Item::Line { loc, text } => (loc.clone(), text.clone()),
+                Item::Line { loc, text } => (loc, text),
             };
             i += 1;
-            let (label, rest) = self.take_label(&text);
+            let (label, rest) = take_label(text);
             let (word, args) = split_word(rest);
             let (second, after_second) = split_word(args);
             let kw = upper(word);
+            let skw = upper(second);
 
             // Conditionals are tracked even inside inactive blocks.
-            match kw.as_str() {
-                "IF" | "ELSIF" | "ELSE" | "ENDIF" => {
-                    self.conditional(&kw, args, &loc);
-                    continue;
-                }
-                _ => {}
+            if matches!(kw.as_str(), "IF" | "ELSIF" | "ELSE" | "ENDIF") {
+                self.conditional(&kw, args, loc);
+                continue;
             }
-            if !self.conds.last().is_none_or(|c| c.active) {
+            if !self.active() {
                 // Skip macro bodies wholesale so their ENDM does not confuse us.
-                if upper(second) == "MACRO" || kw == "REPT" || kw == "IRP" || kw == "IRPC" {
-                    i = self.body_end(items, i, &loc).1;
+                if opens_body(&kw, &skw) {
+                    i = self.body_end(items, i, loc).1;
                 }
                 continue;
             }
 
-            if upper(second) == "MACRO" && label.is_none() {
-                let (end, next) = self.body_end(items, i, &loc);
+            if skw == "MACRO" && label.is_none() {
+                let (end, next) = self.body_end(items, i, loc);
                 let body = items[i..end].to_vec();
                 i = next;
-                self.define_macro(word, after_second, body, &loc);
+                self.define_macro(word, after_second, body, loc);
                 continue;
             }
             if kw == "REPT" {
-                let (end, next) = self.body_end(items, i, &loc);
-                let body = items[i..end].to_vec();
+                let (end, next) = self.body_end(items, i, loc);
+                let body = &items[i..end];
                 i = next;
                 match self.const_eval(args) {
                     Ok(n) if (0..=10_000).contains(&n) => {
                         if depth >= MAX_MACRO_DEPTH {
-                            self.err(&loc, "REPT trop imbriqués");
+                            self.err(loc, "REPT trop imbriqués");
                             continue;
                         }
                         for _ in 0..n {
-                            self.block(&body, depth + 1);
+                            self.block(body, depth + 1);
                         }
                     }
-                    Ok(n) => self.err(&loc, format!("REPT {n} : nombre de répétitions invalide")),
-                    Err(e) => self.err(&loc, format!("REPT : {e}")),
+                    Ok(n) => self.err(loc, format!("REPT {n} : nombre de répétitions invalide")),
+                    Err(e) => self.err(loc, format!("REPT : {e}")),
                 }
                 continue;
             }
 
             if let Some(label) = &label {
-                self.define_label(label, &loc);
+                self.define_label(label, loc);
             }
             if word.is_empty() {
                 continue;
             }
 
             // name EQU / SET / = value
-            let skw = upper(second);
             if label.is_none() && (skw == "EQU" || skw == "SET" || second == "=") && is_ident(word) {
-                self.assign(word, &skw, after_second, &loc);
+                self.assign(word, &skw, after_second, loc);
                 continue;
             }
 
             if let Some(m) = self.macros.get(&kw).cloned() {
                 if depth >= MAX_MACRO_DEPTH {
-                    self.err(&loc, format!("macro {word} : récursion trop profonde"));
+                    self.err(loc, format!("macro {word} : récursion trop profonde"));
                     continue;
                 }
-                let body = self.expand_macro(&m, args, &loc);
+                let body = self.expand_macro(&m, args, loc);
                 self.block(&body, depth + 1);
                 continue;
             }
-            self.statement(&kw, word, args, &loc);
+            self.statement(&kw, word, args, loc);
         }
     }
 
@@ -369,11 +380,10 @@ impl<'a> Assembler<'a> {
         let mut nest = 0;
         for (j, item) in items.iter().enumerate().skip(start) {
             let Item::Line { text, .. } = item else { continue };
-            let (_, rest) = self.take_label(text);
+            let (_, rest) = take_label(text);
             let (w, a) = split_word(rest);
             let w = upper(w);
-            let second = upper(split_word(a).0);
-            if second == "MACRO" || w == "REPT" || w == "IRP" || w == "IRPC" {
+            if opens_body(&w, &upper(split_word(a).0)) {
                 nest += 1;
             } else if w == "ENDM" {
                 if nest == 0 {
@@ -386,18 +396,8 @@ impl<'a> Assembler<'a> {
         (items.len(), items.len())
     }
 
-    /// Splits a leading `label:` off a line.
-    fn take_label<'t>(&self, text: &'t str) -> (Option<String>, &'t str) {
-        let t = text.trim_start();
-        let end = t.find(|c: char| !is_ident_char(c)).unwrap_or(t.len());
-        if end > 0 && t.starts_with(is_ident_start) && t[end..].starts_with(':') && !t[end..].starts_with("::") {
-            return (Some(t[..end].to_owned()), t[end + 1..].trim_start());
-        }
-        (None, t)
-    }
-
     fn conditional(&mut self, kw: &str, args: &str, loc: &Loc) {
-        let active = self.conds.last().is_none_or(|c| c.active);
+        let active = self.active();
         match kw {
             "IF" => {
                 let cond = active && self.cond_value(args, loc);
@@ -439,6 +439,11 @@ impl<'a> Assembler<'a> {
     }
 
     fn define_macro(&mut self, name: &str, params: &str, body: Vec<Item>, loc: &Loc) {
+        let key = upper(name);
+        if is_instruction(&key) || is_directive(&key) {
+            self.err(loc, format!("{name} est un mot réservé, pas un nom de macro"));
+            return;
+        }
         let params: Vec<String> = split_args(params).into_iter().filter(|p| !p.is_empty()).collect();
         let mut locals = Vec::new();
         let mut kept = Vec::new();
@@ -451,11 +456,6 @@ impl<'a> Assembler<'a> {
                 }
             }
             kept.push(item);
-        }
-        let key = upper(name);
-        if is_instruction(&key) || is_directive(&key) {
-            self.err(loc, format!("{name} est un mot réservé, pas un nom de macro"));
-            return;
         }
         self.macros.insert(key, Rc::new(MacroDef { params, locals, body: kept }));
     }
@@ -522,13 +522,18 @@ impl<'a> Assembler<'a> {
             };
             self.symbols.insert(name.to_owned(), def);
         } else {
-            if matches!(self.symbols.get(name), Some(def) if !self.set_names.contains_key(name) && !matches!(def, SymDef::Value(_))) {
+            // SET may redefine a SET or a constant, not a label or a pending EQU.
+            let taken = match self.symbols.get(name) {
+                None | Some(SymDef::Value(_)) => false,
+                Some(_) => !self.set_names.contains(name),
+            };
+            if taken {
                 return self.err(loc, format!("symbole {name} déjà défini"));
             }
             match expr::eval(&parsed, &ConstEnv(self)) {
                 Ok(v) => {
                     self.symbols.insert(name.to_owned(), SymDef::Value(v));
-                    self.set_names.insert(name.to_owned(), ());
+                    self.set_names.insert(name.to_owned());
                 }
                 Err(e) => self.err(loc, format!("SET {name} : {e}")),
             }
@@ -538,7 +543,7 @@ impl<'a> Assembler<'a> {
     /// Replaces SET symbols by their current value, since later SETs change them.
     fn substitute_sets(&self, e: Expr) -> Expr {
         match e {
-            Expr::Sym(ref s) if self.set_names.contains_key(s) => match self.symbols.get(s) {
+            Expr::Sym(ref s) if self.set_names.contains(s) => match self.symbols.get(s) {
                 Some(SymDef::Value(v)) => Expr::Num(*v),
                 _ => e,
             },
@@ -574,9 +579,8 @@ impl<'a> Assembler<'a> {
                 Some((k, v)) => (k.trim().to_ascii_lowercase(), Some(v.trim())),
                 None => (flag.trim().to_ascii_lowercase(), None),
             };
-            let num = match value.map(|v| self.const_eval(v)) {
-                Some(Ok(n)) => Ok(n as u32),
-                Some(Err(e)) => Err(e),
+            let num = match value {
+                Some(v) => self.const_eval(v).map(|n| n as u32),
                 None => Err(format!("{key}= attend une valeur")),
             };
             let p = &mut self.psects[idx];
@@ -585,11 +589,9 @@ impl<'a> Assembler<'a> {
                     p.class = value.map(upper);
                     Ok(())
                 }
+                // Only validated: sizes count in words whatever delta says.
                 "delta" => num.and_then(|d| match d {
-                    1 | 2 => {
-                        p.delta = d;
-                        Ok(())
-                    }
+                    1 | 2 => Ok(()),
                     _ => Err(format!("delta={d} non supporté")),
                 }),
                 "space" => num.map(|s| p.space = Some(s)),
@@ -723,38 +725,28 @@ impl<'a> Assembler<'a> {
 
     fn finish(mut self) -> Assembly {
         if !self.conds.is_empty() {
-            self.diagnostics.push(Diagnostic { file: String::new(), line: None, error: true, message: "IF sans ENDIF".into() });
+            self.err_global("IF sans ENDIF".into());
         }
         // Link.
-        let placement = link::place(self.device, &mut self.psects, &self.placements);
-        let mut map = Vec::new();
-        match placement {
-            Ok(Placement { warnings }) => {
-                for w in warnings {
-                    self.diagnostics.push(Diagnostic { file: String::new(), line: None, error: false, message: w });
-                }
-            }
-            Err(errors) => {
-                for e in errors {
-                    self.diagnostics.push(Diagnostic { file: String::new(), line: None, error: true, message: e });
-                }
+        if let Err(errors) = link::place(self.device, &mut self.psects, &self.placements) {
+            for e in errors {
+                self.err_global(e);
             }
         }
-        for p in &self.psects {
+        let mut map = Vec::new();
+        for p in self.psects.iter().filter(|p| p.size > 0) {
             if let Some(base) = p.base {
-                if p.size > 0 {
-                    map.push((p.name.clone(), p.class.clone().unwrap_or_default(), base, p.size));
-                }
+                map.push((p.name.clone(), p.class.clone().unwrap_or_default(), base, p.size));
             }
         }
         map.sort_by_key(|m| (m.0.starts_with("udata") as u8, m.2));
 
         // Resolve symbols.
         let mut symbols = BTreeMap::new();
-        let names: Vec<String> = self.symbols.keys().cloned().collect();
-        for name in names {
-            if let Ok(v) = (LinkEnv { asm: &self, here: None, depth: 0 }).symbol(&name) {
-                symbols.insert(name, v);
+        let env = LinkEnv { asm: &self, here: None, depth: 0 };
+        for name in self.symbols.keys() {
+            if let Ok(v) = env.symbol(name) {
+                symbols.insert(name.clone(), v);
             }
         }
 
@@ -763,8 +755,7 @@ impl<'a> Assembler<'a> {
         let mut words: BTreeMap<u32, (u16, Loc)> = BTreeMap::new();
         let stmts = std::mem::take(&mut self.stmts);
         for stmt in &stmts {
-            let p = &self.psects[stmt.psect];
-            let Some(base) = p.base else { continue };
+            let Some(base) = self.psects[stmt.psect].base else { continue };
             let addr = base + stmt.offset;
             let env = LinkEnv { asm: &self, here: Some(addr as i64), depth: 0 };
             let encoded = match &stmt.emit {
@@ -858,26 +849,6 @@ impl Env for LinkEnv<'_, '_> {
     fn here(&self) -> Result<i64, String> {
         self.here.ok_or_else(|| "$ interdit ici".into())
     }
-}
-
-fn replace_words(text: &str, subst: &HashMap<String, String>) -> String {
-    let chars: Vec<char> = text.chars().collect();
-    let mut out = String::new();
-    let mut i = 0;
-    while i < chars.len() {
-        if is_ident_start(chars[i]) {
-            let start = i;
-            while i < chars.len() && is_ident_char(chars[i]) {
-                i += 1;
-            }
-            let w: String = chars[start..i].iter().collect();
-            out.push_str(subst.get(&w).map_or(&w, |s| s));
-        } else {
-            out.push(chars[i]);
-            i += 1;
-        }
-    }
-    out
 }
 
 const FILE_OPS: &[(&str, u16)] = &[
@@ -978,18 +949,19 @@ fn encode(op: &str, args: &[String], env: &LinkEnv, addr: u32, wide_bsr: bool) -
             Ok(())
         }
     };
+    let operand = |i: usize| -> Result<i64, String> { value(arg(args, i, &lower)?, env) };
     if let Some((_, base)) = PLAIN_OPS.iter().find(|(n, _)| *n == op) {
         count(0)?;
         return Ok(*base);
     }
     if let Some((_, base)) = LITERAL_OPS.iter().find(|(n, _)| *n == op) {
         count(1)?;
-        let k = value(arg(args, 0, &lower)?, env)?;
+        let k = operand(0)?;
         return Ok(base | (k as u16 & 0xFF));
     }
     if let Some((_, base)) = FILE_OPS.iter().find(|(n, _)| *n == op) {
         count(2)?;
-        let f = value(arg(args, 0, &lower)?, env)? as u16 & 0x7F;
+        let f = operand(0)? as u16 & 0x7F;
         let d = match args.get(1).map(|s| s.trim().to_ascii_uppercase()) {
             None => 1,
             Some(d) if d == "F" => 1,
@@ -1005,13 +977,13 @@ fn encode(op: &str, args: &[String], env: &LinkEnv, addr: u32, wide_bsr: bool) -
     match op {
         "MOVWF" | "CLRF" => {
             count(1)?;
-            let f = value(arg(args, 0, &lower)?, env)? as u16 & 0x7F;
+            let f = operand(0)? as u16 & 0x7F;
             Ok(if op == "MOVWF" { 0x0080 } else { 0x0180 } | f)
         }
         "BCF" | "BSF" | "BTFSC" | "BTFSS" => {
             count(2)?;
-            let f = value(arg(args, 0, &lower)?, env)? as u16 & 0x7F;
-            let b = value(arg(args, 1, &lower)?, env)?;
+            let f = operand(0)? as u16 & 0x7F;
+            let b = operand(1)?;
             if !(0..=7).contains(&b) {
                 return Err(format!("{lower} : bit {b} hors de 0..7"));
             }
@@ -1025,12 +997,12 @@ fn encode(op: &str, args: &[String], env: &LinkEnv, addr: u32, wide_bsr: bool) -
         }
         "CALL" | "GOTO" => {
             count(1)?;
-            let k = value(arg(args, 0, &lower)?, env)? as u16 & 0x7FF;
+            let k = operand(0)? as u16 & 0x7FF;
             Ok(if op == "CALL" { 0x2000 } else { 0x2800 } | k)
         }
         "BRA" => {
             count(1)?;
-            let target = value(arg(args, 0, &lower)?, env)?;
+            let target = operand(0)?;
             let offset = target - (addr as i64 + 1);
             if !(-256..=255).contains(&offset) {
                 return Err(format!("bra : cible trop loin ({offset} mots, limite -256..255)"));
@@ -1039,20 +1011,20 @@ fn encode(op: &str, args: &[String], env: &LinkEnv, addr: u32, wide_bsr: bool) -
         }
         "MOVLB" | "BANKSEL" => {
             count(1)?;
-            let v = value(arg(args, 0, &lower)?, env)?;
+            let v = operand(0)?;
             let bank = if op == "BANKSEL" { v >> 7 } else { v };
             Ok(if wide_bsr { 0x0140 | (bank as u16 & 0x3F) } else { 0x0020 | (bank as u16 & 0x1F) })
         }
         "MOVLP" | "PAGESEL" => {
             count(1)?;
-            let v = value(arg(args, 0, &lower)?, env)?;
+            let v = operand(0)?;
             let page = if op == "PAGESEL" { v >> 8 } else { v };
             Ok(0x3180 | (page as u16 & 0x7F))
         }
         "ADDFSR" => {
             count(2)?;
             let n = fsr_index(arg(args, 0, &lower)?).ok_or("addfsr : FSR0 ou FSR1 attendu")?;
-            let k = signed6(value(arg(args, 1, &lower)?, env)?, &lower)?;
+            let k = signed6(operand(1)?, &lower)?;
             Ok(0x3100 | (n << 6) | k)
         }
         "MOVIW" | "MOVWI" => {
@@ -1084,7 +1056,7 @@ fn encode(op: &str, args: &[String], env: &LinkEnv, addr: u32, wide_bsr: bool) -
         }
         "TRIS" => {
             count(1)?;
-            let f = value(arg(args, 0, &lower)?, env)?;
+            let f = operand(0)?;
             if !(5..=7).contains(&f) {
                 return Err(format!("tris : registre {f} invalide (5..7)"));
             }

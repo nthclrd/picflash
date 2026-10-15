@@ -18,7 +18,6 @@ use crate::device::Device;
 pub struct Psect {
     pub name: String,
     pub class: Option<String>,
-    pub delta: u32,
     pub space: Option<u32>,
     pub reloc: u32,
     pub abs: bool,
@@ -34,7 +33,6 @@ impl Psect {
         Self {
             name: name.to_owned(),
             class: None,
-            delta: 1,
             space: None,
             reloc: 1,
             abs: false,
@@ -43,10 +41,6 @@ impl Psect {
             base: None,
         }
     }
-}
-
-pub struct Placement {
-    pub warnings: Vec<String>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -95,16 +89,47 @@ fn align(addr: u32, to: u32) -> u32 {
     addr.div_ceil(to) * to
 }
 
-pub fn place(device: &Device, psects: &mut [Psect], fixed: &[(String, u32)]) -> Result<Placement, Vec<String>> {
+/// Lowest free `reloc`-aligned address in `from..hi` that fits `size`.
+fn fit_up(from: u32, hi: u32, size: u32, reloc: u32, taken: impl Fn(u32, u32) -> bool) -> Option<u32> {
+    let mut a = align(from, reloc);
+    while a + size <= hi {
+        if !taken(a, a + size) {
+            return Some(a);
+        }
+        a = align(a + 1, reloc);
+    }
+    None
+}
+
+/// Highest free `reloc`-aligned address in `lo..hi` that fits `size`.
+fn fit_down(lo: u32, hi: u32, size: u32, reloc: u32, taken: impl Fn(u32, u32) -> bool) -> Option<u32> {
+    if hi - lo < size {
+        return None;
+    }
+    let mut a = (hi - size) / reloc * reloc;
+    while a >= lo {
+        if !taken(a, a + size) {
+            return Some(a);
+        }
+        if a < reloc {
+            return None;
+        }
+        a -= reloc;
+    }
+    None
+}
+
+pub fn place(device: &Device, psects: &mut [Psect], fixed: &[(String, u32)]) -> Result<(), Vec<String>> {
     let mut errors = Vec::new();
-    let warnings = Vec::new();
     // Occupied intervals per space.
     let mut used: Vec<(Space, u32, u32, String)> = Vec::new();
 
     let space_of = |p: &Psect| -> Space {
-        match (&p.class, p.space) {
-            (Some(c), _) if class_ranges(device, c).is_some() => class_ranges(device, c).unwrap().0,
-            (_, Some(1)) => Space::Data,
+        if let Some((space, _)) = p.class.as_deref().and_then(|c| class_ranges(device, c)) {
+            return space;
+        }
+        match p.space {
+            Some(1) => Space::Data,
             _ if p.has_code => Space::Program,
             _ => Space::Data,
         }
@@ -124,10 +149,6 @@ pub fn place(device: &Device, psects: &mut [Psect], fixed: &[(String, u32)]) -> 
         let base = p.base.unwrap();
         used.push((space_of(p), base, base + p.size, p.name.clone()));
     }
-
-    let overlaps = |used: &[(Space, u32, u32, String)], space: Space, start: u32, end: u32| {
-        used.iter().any(|(s, a, b, _)| *s == space && start < *b && *a < end)
-    };
 
     // Program memory cursor: end of the highest fixed psect at a non-zero address.
     let mut cursor: Option<u32> = psects
@@ -152,65 +173,16 @@ pub fn place(device: &Device, psects: &mut [Psect], fixed: &[(String, u32)]) -> 
             continue;
         };
         let (size, reloc) = (p.size, p.reloc.max(1));
-        let mut placed = None;
-        match (space, cursor) {
+        let taken = |start: u32, end: u32| used.iter().any(|(s, a, b, _)| *s == space && start < *b && *a < end);
+        let placed = match (space, cursor) {
             (Space::Program, Some(c)) => {
                 // Bottom-up from the cursor, then the remaining ranges.
-                let order = ranges.iter().filter(|r| r.1 > c).chain(ranges.iter().filter(|r| r.1 <= c));
-                for &(lo, hi) in order {
-                    let mut a = align(if (lo..hi).contains(&c) { c } else { lo }, reloc);
-                    while a + size <= hi {
-                        if !overlaps(&used, space, a, a + size) {
-                            placed = Some(a);
-                            break;
-                        }
-                        a = align(a + 1, reloc);
-                    }
-                    if placed.is_some() {
-                        break;
-                    }
-                }
+                let mut order = ranges.iter().filter(|r| r.1 > c).chain(ranges.iter().filter(|r| r.1 <= c));
+                order.find_map(|&(lo, hi)| fit_up(if (lo..hi).contains(&c) { c } else { lo }, hi, size, reloc, taken))
             }
-            (Space::Program, None) => {
-                for &(lo, hi) in &ranges {
-                    if hi - lo < size {
-                        continue;
-                    }
-                    let mut a = (hi - size) / reloc * reloc;
-                    loop {
-                        if a < lo {
-                            break;
-                        }
-                        if !overlaps(&used, space, a, a + size) {
-                            placed = Some(a);
-                            break;
-                        }
-                        if a < reloc {
-                            break;
-                        }
-                        a -= reloc;
-                    }
-                    if placed.is_some() {
-                        break;
-                    }
-                }
-            }
-            (Space::Data, _) => {
-                for &(lo, hi) in &ranges {
-                    let mut a = align(lo, reloc);
-                    while a + size <= hi {
-                        if !overlaps(&used, space, a, a + size) {
-                            placed = Some(a);
-                            break;
-                        }
-                        a = align(a + 1, reloc);
-                    }
-                    if placed.is_some() {
-                        break;
-                    }
-                }
-            }
-        }
+            (Space::Program, None) => ranges.iter().find_map(|&(lo, hi)| fit_down(lo, hi, size, reloc, taken)),
+            (Space::Data, _) => ranges.iter().find_map(|&(lo, hi)| fit_up(lo, hi, size, reloc, taken)),
+        };
         match placed {
             Some(a) => {
                 psects[i].base = Some(a);
@@ -228,15 +200,14 @@ pub fn place(device: &Device, psects: &mut [Psect], fixed: &[(String, u32)]) -> 
     }
 
     // Fixed psects that collide.
-    let mut sorted = used.clone();
-    sorted.sort_by_key(|u| (u.0 == Space::Data, u.1));
-    for w in sorted.windows(2) {
+    used.sort_by_key(|u| (u.0 == Space::Data, u.1));
+    for w in used.windows(2) {
         if w[0].0 == w[1].0 && w[1].1 < w[0].2 {
             errors.push(format!("les psects {} et {} se chevauchent ({:#06x})", w[0].3, w[1].3, w[1].1));
         }
     }
     if errors.is_empty() {
-        Ok(Placement { warnings })
+        Ok(())
     } else {
         Err(errors)
     }

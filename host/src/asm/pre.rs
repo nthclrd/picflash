@@ -28,13 +28,14 @@ struct Macro {
     body: String,
 }
 
-struct Cond {
+/// One open `#if` / `IF` block.
+pub struct Cond {
     /// Lines in this branch are kept.
-    active: bool,
-    /// Some branch of this #if chain was already taken.
-    taken: bool,
+    pub active: bool,
+    /// Some branch of this chain was already taken.
+    pub taken: bool,
     /// The enclosing block is active.
-    outer: bool,
+    pub outer: bool,
 }
 
 pub struct Preprocessor<'a> {
@@ -222,9 +223,9 @@ impl<'a> Preprocessor<'a> {
                     let args = split_args(&inner);
                     let mut subst = HashMap::new();
                     for (k, p) in params.iter().enumerate() {
-                        subst.insert(p.as_str(), args.get(k).cloned().unwrap_or_default());
+                        subst.insert(p.clone(), args.get(k).cloned().unwrap_or_default());
                     }
-                    replace_idents(&m.body, &subst)
+                    replace_words(&m.body, &subst)
                 }
             };
             active.push(name);
@@ -234,7 +235,7 @@ impl<'a> Preprocessor<'a> {
         out
     }
 
-    fn eval_if(&self, text: &str, loc: &Loc) -> Result<bool, String> {
+    fn eval_if(&self, text: &str) -> Result<bool, String> {
         // defined(X) / defined X before macro expansion.
         let mut resolved = String::new();
         let mut rest = text;
@@ -262,7 +263,6 @@ impl<'a> Preprocessor<'a> {
                 Err("$ interdit dans #if".into())
             }
         }
-        let _ = loc;
         Ok(expr::eval(&expr::parse(&expanded)?, &Zero)? != 0)
     }
 
@@ -300,7 +300,7 @@ impl<'a> Preprocessor<'a> {
                         let cond = if !active {
                             false
                         } else if word == "if" {
-                            match self.eval_if(rest, &loc) {
+                            match self.eval_if(rest) {
                                 Ok(v) => v,
                                 Err(e) => {
                                     self.error(&loc, format!("#if : {e}"));
@@ -318,7 +318,7 @@ impl<'a> Preprocessor<'a> {
                             continue;
                         };
                         let (outer, taken) = (top.outer, top.taken);
-                        let cond = outer && !taken && self.eval_if(rest, &loc).unwrap_or(false);
+                        let cond = outer && !taken && self.eval_if(rest).unwrap_or(false);
                         let top = conds.last_mut().unwrap();
                         top.active = cond;
                         top.taken |= cond;
@@ -420,8 +420,8 @@ impl<'a> Preprocessor<'a> {
 }
 
 /// Replaces whole identifiers per `subst`.
-fn replace_idents(body: &str, subst: &HashMap<&str, String>) -> String {
-    let chars: Vec<char> = body.chars().collect();
+pub fn replace_words(text: &str, subst: &HashMap<String, String>) -> String {
+    let chars: Vec<char> = text.chars().collect();
     let mut out = String::new();
     let mut i = 0;
     while i < chars.len() {
@@ -431,7 +431,7 @@ fn replace_idents(body: &str, subst: &HashMap<&str, String>) -> String {
                 i += 1;
             }
             let word: String = chars[start..i].iter().collect();
-            out.push_str(subst.get(word.as_str()).map_or(&word, |s| s));
+            out.push_str(subst.get(&word).map_or(&word, |s| s));
         } else {
             out.push(chars[i]);
             i += 1;

@@ -262,27 +262,24 @@ impl Parser {
                     _ => Err("parenthèse fermante manquante".into()),
                 }
             }
-            Some(Tok::Ident(name)) => {
-                if self.peek() == Some(&Tok::LParen) {
+            Some(Tok::Ident(name)) if self.peek() == Some(&Tok::LParen) => {
+                self.pos += 1;
+                let mut args = Vec::new();
+                if self.peek() == Some(&Tok::RParen) {
                     self.pos += 1;
-                    let mut args = Vec::new();
-                    if self.peek() != Some(&Tok::RParen) {
-                        loop {
-                            args.push(self.binary(0)?);
-                            match self.next() {
-                                Some(Tok::Comma) => continue,
-                                Some(Tok::RParen) => break,
-                                _ => return Err(format!("appel de {name} mal formé")),
-                            }
-                        }
-                    } else {
-                        self.pos += 1;
-                    }
-                    Ok(Expr::Call(name, args))
                 } else {
-                    Ok(Expr::Sym(name))
+                    loop {
+                        args.push(self.binary(0)?);
+                        match self.next() {
+                            Some(Tok::Comma) => continue,
+                            Some(Tok::RParen) => break,
+                            _ => return Err(format!("appel de {name} mal formé")),
+                        }
+                    }
                 }
+                Ok(Expr::Call(name, args))
             }
+            Some(Tok::Ident(name)) => Ok(Expr::Sym(name)),
             Some(t) => Err(format!("« {t} » inattendu")),
             None => Err("expression incomplète".into()),
         }
