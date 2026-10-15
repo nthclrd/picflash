@@ -3,7 +3,7 @@
 use std::io::{Read, Write};
 use std::time::Duration;
 
-use anyhow::{bail, Context, Result};
+use anyhow::{anyhow, bail, Context, Result};
 use picflash_protocol::{op, op_reply_len, shape, status, MAX_PAYLOAD, USB_PID, USB_VID};
 
 /// Runs one script frame on the target and returns the values clocked in.
@@ -104,7 +104,10 @@ impl SerialLink {
     pub fn open(path: Option<&str>) -> Result<Self> {
         let path = match path {
             Some(p) => p.to_owned(),
-            None => find_port()?,
+            None => board_ports()
+                .into_iter()
+                .next()
+                .ok_or_else(|| anyhow!("no programmer found ({USB_VID:04x}:{USB_PID:04x}); pass --port"))?,
         };
         let port = serialport::new(&path, 115_200)
             .timeout(Duration::from_secs(5))
@@ -127,13 +130,6 @@ pub fn board_ports() -> Vec<String> {
         // macOS lists both tty.* and cu.*; cu.* does not wait for DCD.
         .filter(|name| !name.contains("/tty."))
         .collect()
-}
-
-fn find_port() -> Result<String> {
-    match board_ports().into_iter().next() {
-        Some(port) => Ok(port),
-        None => bail!("no programmer found ({USB_VID:04x}:{USB_PID:04x}); pass --port"),
-    }
 }
 
 impl Transport for SerialLink {

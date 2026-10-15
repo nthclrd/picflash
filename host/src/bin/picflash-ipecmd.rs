@@ -90,14 +90,7 @@ fn parse(argv: impl Iterator<Item = String>) -> Result<Args> {
             [b'T'] => {}
             [b'F', ..] => args.hex = Some(PathBuf::from(value(1))),
             [b'M'] => args.program = Some(Regions::ALL),
-            [b'M', ..] => {
-                let regions = regions(&upper[1..], &raw)?;
-                args.program = Some(match args.program {
-                    Some(Regions::ALL) => Regions::ALL,
-                    Some(r) => merge(r, regions),
-                    None => regions,
-                });
-            }
+            [b'M', ..] => args.program = Some(merge(args.program.unwrap_or(Regions::NONE), regions(&upper[1..], &raw)?)),
             [b'E'] => args.erase = true,
             [b'Y'] => args.verify = Some(Regions::ALL),
             [b'Y', ..] => args.verify = Some(merge(args.verify.unwrap_or(Regions::NONE), regions(&upper[1..], &raw)?)),

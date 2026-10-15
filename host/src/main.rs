@@ -1,3 +1,4 @@
+use std::collections::{BTreeMap, BTreeSet};
 use std::path::PathBuf;
 use std::time::Instant;
 
@@ -291,8 +292,6 @@ fn main() -> Result<()> {
 }
 
 fn list_embedded(all: bool) -> Result<()> {
-    use std::collections::BTreeMap;
-
     let db = picflash::devdb::Database::embedded();
     let mut specs: BTreeMap<&str, Vec<&str>> = BTreeMap::new();
     for d in &db.parts {
@@ -309,14 +308,12 @@ fn list_embedded(all: bool) -> Result<()> {
 }
 
 fn list_parts(roots: &[PathBuf], all: bool) -> Result<()> {
-    use std::collections::BTreeMap;
-
     let parts = device::scan(roots);
     if parts.is_empty() {
         bail!("no device packs found; pass --packs");
     }
     // spec -> (arch, part names)
-    let mut specs: BTreeMap<String, (String, std::collections::BTreeSet<String>)> = BTreeMap::new();
+    let mut specs: BTreeMap<String, (String, BTreeSet<String>)> = BTreeMap::new();
     let mut failed = 0;
     for (path, dev) in &parts {
         match dev {

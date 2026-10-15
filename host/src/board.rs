@@ -42,7 +42,7 @@ fn mv16(op: u8, mv: u16) -> [u8; 3] {
     [op, lo, hi]
 }
 
-fn volts(mv: u16) -> String {
+pub(crate) fn volts(mv: u16) -> String {
     format!("{:.2} V", mv as f64 / 1000.0)
 }
 

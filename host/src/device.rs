@@ -254,17 +254,20 @@ impl Device {
                 }
                 "Programming" => power.lvp_min_mv = millivolts(a.get("lvpthresh"))?,
                 "ProgrammingWaitTime" => {
-                    // A row erase listed without a time still has the command.
-                    if let (Some(op), None) = (a.get("progop"), a.get("time")) {
-                        waits.entry(op.clone()).or_insert(0);
-                    }
-                    if let (Some(op), Some(t)) = (a.get("progop"), a.get("time")) {
-                        let t = num(t)?;
-                        let us = match a.get("timeunits").map(String::as_str) {
-                            Some("ms") => t * 1000,
-                            _ => t,
-                        };
-                        waits.insert(op.clone(), us);
+                    match (a.get("progop"), a.get("time")) {
+                        // A row erase listed without a time still has the command.
+                        (Some(op), None) => {
+                            waits.entry(op.clone()).or_insert(0);
+                        }
+                        (Some(op), Some(t)) => {
+                            let t = num(t)?;
+                            let us = match a.get("timeunits").map(String::as_str) {
+                                Some("ms") => t * 1000,
+                                _ => t,
+                            };
+                            waits.insert(op.clone(), us);
+                        }
+                        _ => {}
                     }
                 }
                 "ProgrammingRowSize" if a.get("progop").map(String::as_str) == Some("pgm") => {
@@ -332,10 +335,10 @@ impl Device {
                 "DCRFieldDef" => {
                     if let Some(d) = dcr.as_mut().filter(|d| d.3 == 1) {
                         let width = num(req(&a, "nzwidth")?)?;
-                        if a.get("cname").map(String::as_str) == Some("LVP") && (0..16).contains(&d.2) {
-                            lvp_fuse = Some((d.0, 1u16 << d.2));
-                        }
                         if let (Some(name), true) = (a.get("cname"), (0..16).contains(&d.2)) {
+                            if name == "LVP" {
+                                lvp_fuse = Some((d.0, 1u16 << d.2));
+                            }
                             let f = ConfigField {
                                 address: d.0,
                                 name: name.clone(),
@@ -456,13 +459,8 @@ pub fn default_pack_roots() -> Vec<PathBuf> {
         }
     }
     for base in bases {
-        let mut versions: Vec<PathBuf> = std::fs::read_dir(base)
-            .into_iter()
-            .flatten()
-            .flatten()
-            .map(|e| e.path().join("packs"))
-            .filter(|p| p.is_dir())
-            .collect();
+        let mut versions: Vec<PathBuf> =
+            read_dirs(&base).map(|v| v.join("packs")).filter(|p| p.is_dir()).collect();
         versions.sort_by_key(|p| std::cmp::Reverse(version_key(p.parent().unwrap())));
         roots.extend(versions);
     }
@@ -573,7 +571,7 @@ fn read_dirs(dir: &Path) -> impl Iterator<Item = PathBuf> {
 }
 
 /// "1.9.258" or "v6.35" -> [1, 9, 258] / [6, 35] for ordering.
-fn version_key(dir: &Path) -> Vec<u32> {
+pub(crate) fn version_key(dir: &Path) -> Vec<u32> {
     dir.file_name()
         .and_then(|n| n.to_str())
         .unwrap_or("")

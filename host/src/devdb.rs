@@ -107,19 +107,12 @@ pub fn parse_header(text: &str) -> Result<(AsmHeader, HeaderSymbols)> {
             let value = header_number(value)?;
             raw.equ.insert(name.to_owned(), value);
             let Some(reg) = current.map(|i| &mut header.registers[i]) else { continue };
+            let suffix = name.strip_prefix(&reg.name).and_then(|r| r.strip_prefix('_'));
             if name == reg.name {
                 reg.address = value as u32;
-            } else if let Some(field) = name
-                .strip_prefix(&reg.name)
-                .and_then(|r| r.strip_prefix('_'))
-                .and_then(|r| r.strip_suffix("_POSN"))
-            {
+            } else if let Some(field) = suffix.and_then(|r| r.strip_suffix("_POSN")) {
                 reg.fields.push((field.to_owned(), value as u8, 0));
-            } else if let Some(field) = name
-                .strip_prefix(&reg.name)
-                .and_then(|r| r.strip_prefix('_'))
-                .and_then(|r| r.strip_suffix("_SIZE"))
-            {
+            } else if let Some(field) = suffix.and_then(|r| r.strip_suffix("_SIZE")) {
                 if let Some(f) = reg.fields.iter_mut().rev().find(|f| f.0 == field) {
                     f.2 = value as u8;
                 }

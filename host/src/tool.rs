@@ -54,15 +54,8 @@ pub struct Opened {
 
 /// What is plugged in, for status displays.
 pub fn detect() -> String {
-    let boards = board_ports();
-    let kits = pickit::scan();
-    let mut parts: Vec<String> = boards.iter().map(|p| format!("carte picflash ({p})")).collect();
-    for k in &kits {
-        match &k.problem {
-            None => parts.push(k.kind.name().to_owned()),
-            Some(p) => parts.push(p.clone()),
-        }
-    }
+    let mut parts: Vec<String> = board_ports().iter().map(|p| format!("carte picflash ({p})")).collect();
+    parts.extend(pickit::scan().into_iter().map(|k| k.problem.unwrap_or_else(|| k.kind.name().to_owned())));
     if parts.is_empty() {
         "aucun programmateur détecté".into()
     } else {
@@ -97,26 +90,26 @@ pub fn open(choice: Choice, device: &Device, opts: &Options) -> Result<Opened> {
                 Entry::LowVoltage
             });
             kit.setup(device, Setup { entry, power_mv: opts.power_mv })?;
-            let vdd = match kit.vdd_mv {
-                Some(mv) => format!("{:.2} V", mv as f64 / 1000.0),
-                None => "VDD non mesuré".into(),
-            };
             let summary = format!(
-                "{} (firmware {}{}), {}, cible {vdd}{}",
+                "{} (firmware {}{}), {}, cible {}{}",
                 kit.kind.name(),
                 kit.firmware,
                 kit.serial.as_deref().map(|s| format!(", n° {s}")).unwrap_or_default(),
                 entry_name(entry),
+                kit.vdd_mv.map(board::volts).unwrap_or_else(|| "VDD non mesuré".into()),
                 if opts.power_mv.is_some() { " fournie par l'outil" } else { "" },
             );
             let algo = device.algorithm()?;
             Ok(Opened { link: Link::PicKit(Box::new(Gen4Link::new(kit, algo))), entry, summary })
         }
-        Choice::Sim => Ok(Opened {
-            link: Link::Sim(Box::new(SimPic::new(device)?)),
-            entry: opts.entry.unwrap_or_default(),
-            summary: format!("simulateur, {}", entry_name(opts.entry.unwrap_or_default())),
-        }),
+        Choice::Sim => {
+            let entry = opts.entry.unwrap_or_default();
+            Ok(Opened {
+                link: Link::Sim(Box::new(SimPic::new(device)?)),
+                entry,
+                summary: format!("simulateur, {}", entry_name(entry)),
+            })
+        }
         Choice::Auto => unreachable!(),
     }
 }

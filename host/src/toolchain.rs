@@ -6,7 +6,7 @@ use std::process::Command;
 
 use anyhow::{bail, Context, Result};
 
-use crate::device::Device;
+use crate::device::{version_key, Device};
 
 /// Install roots searched for `xc8/v*/pic-as/bin/pic-as`.
 fn xc8_roots() -> Vec<PathBuf> {
@@ -20,16 +20,6 @@ fn xc8_roots() -> Vec<PathBuf> {
         }
     }
     roots
-}
-
-fn version_key(dir: &Path) -> Vec<u32> {
-    dir.file_name()
-        .and_then(|n| n.to_str())
-        .unwrap_or("")
-        .trim_start_matches('v')
-        .split('.')
-        .map(|p| p.parse().unwrap_or(0))
-        .collect()
 }
 
 /// Finds `pic-as`: `PICFLASH_PIC_AS`, then `PATH`, then the newest XC8 install.
