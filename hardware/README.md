@@ -1,21 +1,23 @@
 # Carte picflash (RP2040)
 
-Schéma KiCad 10 généré par `tools/gen_schematic.py` : la netlist Python est la
-source de vérité, le `.kicad_sch` se régénère. Design original à partir des
-datasheets publiques (RP2040 Hardware Design Guide, MT3608, TLV758,
-SN74LVC1T45). **Non testé, à relire avant fabrication.**
+Design original tiré des datasheets publiques (RP2040 Hardware Design Guide,
+MT3608, TLV758, SN74LVC1T45). **Non testé, à relire avant fabrication.**
+
+Le schéma KiCad 10 est généré par `tools/gen_schematic.py` : la netlist Python
+est la source de vérité, le `.kicad_sch` se régénère.
 
 ```sh
 cd hardware/tools
-python3 gen_schematic.py     # écrit picflash-board.kicad_sch + netlist.json
+python3 gen_schematic.py     # écrit ../picflash-board.kicad_sch, netlist.json, parts.json
 python3 check_netlist.py     # netlist exportée par KiCad == spec
+cd ..
 K=/Applications/KiCad/KiCad.app/Contents/MacOS/kicad-cli
 $K sch erc picflash-board.kicad_sch            # 0 violation attendue
 $K sch export pdf -o build/picflash-board.pdf picflash-board.kicad_sch
 ```
 
 Le générateur refuse toute collision géométrique (fil ou broche qui en touche
-une autre), et `check_netlist.py` vérifie que chaque broche est sur le bon net.
+une autre). `check_netlist.py` vérifie que chaque broche est sur le bon net.
 
 ## Blocs
 
@@ -49,12 +51,11 @@ DIR = 1 : RP2040 vers la cible ; DIR = 0 : la cible est lue (et haute impédance
 ## Règles pour le firmware
 
 - Ne jamais activer VPP_ON et MCLR_PD en même temps (R53 limite à ~60 mA).
-- Régler VT_PWM avant VT_EN ; vérifier sur ADC0 qu'aucune alimentation externe
-  n'est présente avant d'activer VT_EN.
-- Régler VPP en boucle fermée sur ADC1 avant VPP_ON ; PWM à 0 = tension max
-  (13,9 V), alors que beaucoup de PIC16 n'acceptent que 9 V : ne jamais
-  activer BOOST_EN avant d'avoir fixé le PWM.
-- Même chose pour VT_EN : PWM à 0 = 4,86 V.
+- PWM à 0 = tension max : 13,9 V pour VPP (beaucoup de PIC16 n'acceptent que
+  9 V), 4,86 V pour VDD. Fixer VPP_PWM avant BOOST_EN, VT_PWM avant VT_EN.
+- Avant VT_EN : vérifier sur ADC0 qu'aucune alimentation externe n'est
+  présente.
+- Avant VPP_ON : régler VPP en boucle fermée sur ADC1.
 
 ## Points ouverts
 
@@ -62,17 +63,16 @@ DIR = 1 : RP2040 vers la cible ; DIR = 0 : la cible est lue (et haute impédance
   du MT3608 avec l'injection PWM dans FB (le firmware régule en boucle fermée).
 - C40 (22 µF X5R 25 V) ne garde qu'environ 5-8 µF à 14 V : suffisant pour
   quelques mA de VPP, à surveiller.
-- Stock JLCPCB faible pour L1 (CKCS4030, quelques centaines) ; équivalents
+- Stock JLCPCB faible pour L1 (CKCS4030, quelques centaines). Équivalents
   4×4 mm possibles : C167883, C83472 (empreinte à recouper).
-- PCB : routé automatiquement, à relire à l'œil avant commande (voir ci-dessous).
 
 ## Références JLCPCB
 
 Toutes les lignes de `fab/picflash-bom.csv` ont un numéro LCSC, vérifié le
-15/10/2026 dans le catalogue JLCPCB (type Basic/Extended et stock) ; le stock
-change, revérifier à la commande. Pièces Basic quand elles existent ; quartz
-ABM8-272-T3 (C20625731, charge 10 pF, celui du design de référence RP2040) pour
-aller avec C4/C5 à 15 pF. Table dans `tools/gen_schematic.py` (`LCSC`).
+15/10/2026 dans le catalogue JLCPCB (type Basic/Extended et stock). Le stock
+change : revérifier à la commande. Pièces Basic quand elles existent. Quartz
+ABM8-272-T3 (C20625731, charge 10 pF, celui du design de référence RP2040),
+assorti à C4/C5 de 15 pF. Table `LCSC` dans `tools/gen_schematic.py`.
 
 ## PCB
 
@@ -86,7 +86,8 @@ make all FREEROUTING=/chemin/freerouting-2.4.1.jar
 
 | Étape | Outil | Résultat |
 |-------|-------|----------|
-| `pcb` | `tools/gen_pcb.py` (pcbnew) | composants principaux placés par blocs, passifs placés près de leurs voisins, anneau libre autour du RP2040 ; via + piste courte vers les plans pour chaque pastille GND/+3V3 (`tools/fanout.py`) |
+| `schematic` | `tools/gen_schematic.py` + `tools/check_netlist.py` | schéma régénéré et vérifié (voir plus haut) |
+| `pcb` | `tools/gen_pcb.py` (pcbnew) | composants principaux placés par blocs, passifs près de leurs voisins, anneau libre autour du RP2040 ; via + piste courte vers les plans pour chaque pastille GND/+3V3 (`tools/fanout.py`) |
 | `route` | `tools/dsn_filter.py` + Freerouting 2.4.1 | signaux seulement (GND/+3V3 passent par les plans), 0 connexion non routée |
 | `finish` | `tools/finish_pcb.py` | import du routage, mêmes vias de plan rejoués à l'identique, plans de masse F/B, remplissage |
 | `check` | `kicad-cli` | ERC 0 ; DRC 0 erreur, 0 non connecté, 21 avertissements (sérigraphie rognée, broches non connectées) |
@@ -97,6 +98,8 @@ via 0,6/0,3 mm ; classe « Power » (VBUS, +5V, TVDD, SW, VPP_RAW) en 0,4 mm,
 isolement 0,2 mm, via 0,8/0,4 mm. Compatibles JLCPCB 4 couches.
 
 ### Avant de commander
+
+Le PCB est routé automatiquement.
 
 - Relire le routage dans KiCad : retour de masse sous l'USB, boucle du MT3608
   (SW, L1, D1, C40 courte), pistes VPP/MCLR.

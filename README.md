@@ -1,20 +1,25 @@
 # picflash
 
-Programmeur PIC open source en Rust : l'outil `picflash` remplace MPLAB IPE et
-pilote au choix une carte maison à RP2040 (proto sur Pi Pico en attendant le
-PCB dédié) ou les outils Microchip : PICkit 4, PICkit 5, PICkit Basic, MPLAB
-Snap.
+Programmeur PIC open source en Rust. L'outil `picflash` remplace MPLAB IPE. Il
+pilote une carte maison à RP2040 (prototype sur Pi Pico en attendant le PCB)
+ou les outils Microchip : PICkit 4, PICkit 5, PICkit Basic, MPLAB Snap.
 
-Algorithmes écrits depuis les *Memory Programming Specifications* publiques
-(PIC16(L)F178X, PIC16(L)F184XX DS40001970), recoupés avec les séquences des
-scripts PICkit 4 (voir `docs/pickit-gen4.md`). Les paramètres de chaque
-part (mémoire, IDs, config, registres, bits) viennent d'une base embarquée
+Les algorithmes viennent des *Memory Programming Specifications* publiques
+(PIC16(L)F178X, PIC16(L)F184XX DS40001970), recoupées avec les séquences des
+scripts PICkit 4 (`docs/pickit-gen4.md`). Les paramètres de chaque part
+(mémoire, IDs, config, registres, bits) viennent d'une base embarquée
 (`host/data/devices.json.gz`) extraite des device packs Microchip, sous licence
 Apache-2.0 (`host/data/LICENSE-microchip-dfp.txt`). Aucun code, script ni
 firmware Microchip n'est copié dans ce repo.
 
 **Ni MPLAB X ni XC8 ne sont nécessaires** : picflash assemble, programme et
 désassemble seul (vérifié en interdisant l'accès à `/Applications/microchip`).
+
+## État
+
+Testé uniquement sur un PIC simulé : ni le PICkit, ni la carte, ni le firmware
+n'ont encore tourné sur du vrai matériel. La carte (`hardware/`) n'a pas été
+fabriquée. Développé avec l'aide de Claude (Anthropic).
 
 ## Programmateurs
 
@@ -26,13 +31,18 @@ désassemble seul (vérifié en interdisant l'accès à `/Applications/microchip
 | PICkit Basic     | oui | non | non |
 | MPLAB Snap       | oui | non | non |
 
-Les outils Microchip doivent être en **mode MPLAB** (celui qu'utilise MPLAB X ;
-les modes AVR / CMSIS-DAP sont détectés et signalés). picflash leur envoie ses
+Les outils Microchip doivent être en **mode MPLAB** (celui de MPLAB X ; les
+modes AVR / CMSIS-DAP sont détectés et signalés). picflash leur envoie ses
 propres scripts « Gen4 », traduits depuis les mêmes séquences bit à bit que la
-carte picflash (`host/src/pickit.rs`). Sources, sans code Microchip copié : les
-opcodes et formats d'opérandes Gen4 viennent de la pile Python des device packs
-(`scripts/*/common`, Apache-2.0), le cadrage USB et les commandes
-d'alimentation du pilote `pickit5.c` d'avrdude (faits de protocole seulement).
+carte (`host/src/pickit.rs`). Sources, sans code Microchip copié : opcodes et
+formats d'opérandes Gen4 tirés de la pile Python des device packs
+(`scripts/*/common`, Apache-2.0) ; cadrage USB et commandes d'alimentation
+tirés du pilote `pickit5.c` d'avrdude (faits de protocole seulement).
+
+La traduction Gen4 est vérifiée contre le PIC simulé
+(`host/tests/pickit_flows.rs`, mutations incluses), pas sur un vrai PICkit.
+Windows : le PICkit doit utiliser le pilote WinUSB installé par MPLAB X.
+Linux : la règle udev du `.deb` donne l'accès.
 
 ```sh
 picflash write blink.hex                 # auto : carte picflash, sinon PICkit/Snap
@@ -40,11 +50,6 @@ picflash --tool pickit --lv write blink.hex
 picflash --tool pickit --power 3.3 id    # PICkit 4/5 alimente la cible en 3,3 V
 picflash-ipecmd -TPPK4 -E -M -P16F1789 -Fblink.hex -OL [-L] [-W5]
 ```
-
-Non testé sur matériel : la traduction Gen4 est vérifiée contre le PIC simulé
-(`host/tests/pickit_flows.rs`, mutations incluses), pas encore sur un vrai
-PICkit. Sous Windows, le PICkit doit utiliser le pilote WinUSB installé par
-MPLAB X ; sous Linux, la règle udev du `.deb` donne l'accès.
 
 ## Parts supportées
 
@@ -61,12 +66,12 @@ picflash -P PIC16F18446 info
 | `Midrange6Bit` | 6 bits LSb first, clé LSb + 1 clk | PIC16F1789, PIC16F1829…     |
 | `Midrange8Bit` | 8 bits + payload 24 bits MSb first | PIC16F18446, PIC16F18877…   |
 
-Une spec n'est déclarée que si *toutes* ses parts utilisent exactement les mêmes
-séquences (entrée, ID, effacement, écriture ligne/config, lecture) que la
+Une spec n'est déclarée que si *toutes* ses parts utilisent exactement les
+mêmes séquences (entrée, ID, effacement, écriture ligne/config, lecture) que la
 référence de la famille. Exclues pour l'instant : contournement d'errata à
 l'effacement (DS40001390, 40001397, 40001654), autre jeu de commandes
 (DS40001738), Bulk Erase avec payload de régions (DS40002266, 2276, 2317, 2500,
-2540, 2646). Ajouter une spec = une ligne dans `SPECS` (`host/src/device.rs`)
+2540, 2646). Ajouter une spec = une ligne dans `SPECS` (`host/src/device.rs`),
 une fois sa séquence vérifiée.
 
 ## Installer (sans ligne de commande)
@@ -77,12 +82,13 @@ une fois sa séquence vérifiée.
 | Windows | `picflash_x.y.z_*-setup.exe` | « Informations complémentaires > Exécuter quand même » (SmartScreen) |
 | Linux   | `.deb` ou `.AppImage`      | le `.deb` installe la règle udev de la carte                  |
 
-Aucun prérequis. Utilisation : déposer un `.asm` dans la fenêtre (assemblé par
-picflash, erreurs surlignées dans la vue Source), puis « Programmer » ; ou
-déposer un `.hex`.
+Aucun prérequis. Déposer un `.asm` dans la fenêtre (assemblé par picflash,
+erreurs surlignées dans la vue Source) puis « Programmer », ou déposer un
+`.hex`.
 
 Construire les installeurs : `cd gui && cargo packager --release --formats app,dmg`
-en local (macOS), ou le workflow `installeurs` (tag `v*`) pour les 4 plateformes.
+en local (macOS), ou le workflow `installeurs` (tag `v*`) pour les 4
+plateformes.
 
 ## Outils
 
@@ -93,14 +99,27 @@ en local (macOS), ou le workflow `installeurs` (tag `v*`) pour les 4 plateformes
 | `picflash-gui`    | fenêtre : .asm → compile → programme, vues source/hex/désassemblée colorées |
 
 `-TPSIM` (ipecmd) ou « Simulateur » (GUI) exécutent tout sur un PIC simulé bit
-à bit : utile sans carte.
+à bit, sans carte.
 
 ```sh
 cargo install --path host      # picflash + picflash-ipecmd dans ~/.cargo/bin
+picflash ping
+picflash id
+picflash write blink.hex       # erase + write + verify + run
+picflash read dump.hex
 picflash asm blink.asm         # -> blink.hex, sans XC8
 picflash -P16F1789 disasm blink.hex
 picflash-ipecmd -TPSIM -E -M -P16F1789 -F"blink.hex" -OL
 cargo run --release -p picflash-gui -- blink.hex [--asm]
+```
+
+Dans le `Makefile` du lab :
+
+```make
+PROGRAMMER ?= PPF                       # PSIM = simulateur
+IPECMD ?= $(HOME)/.cargo/bin/picflash-ipecmd
+flash: $(EXEC)
+	$(IPECMD) $(FLASH_ARGS)             # FLASH_ARGS d'IPE inchangés
 ```
 
 ## Fonctions IPE
@@ -115,21 +134,20 @@ cargo run --release -p picflash-gui -- blink.hex [--asm]
 | Enregistrer un .hex | `read out.hex` | `-GF` | « Enregistrer… » (fichier ou puce lue) |
 
 Programmation partielle : les lignes de mémoire programme sont effacées une à
-une (commande Row Erase) ; la config ne peut que passer des bits de 1 à 0 sans
-effacement complet, ce qui est vérifié avant d'écrire. Le checksum suit la
-formule des specs (DS40001970 §2.4.3) et retrouve leur tableau d'exemples.
+une (commande Row Erase). Sans effacement complet, la config ne peut que passer
+des bits de 1 à 0 ; c'est vérifié avant d'écrire. Le checksum suit la formule
+des specs (DS40001970 §2.4.3) et retrouve leur tableau d'exemples.
 
 ## Débogueur (simulé)
 
 Onglet « Débogueur » : le programme tourne sur un simulateur du cœur PIC16
-enhanced (`host/src/emu.rs`, 49 instructions, pile, banques, FSR, cycles) :
-Continuer (F5), Pas (F11), Pas par-dessus (F10), Sortir, Reset, points d'arrêt
-dans la marge, registres du cœur, pile, LED des ports, RAM par banque, en temps
-réel à la fréquence choisie. Les périphériques (timers, ADC, interruptions)
-ne sont pas simulés. Le débogage sur la vraie puce via un PICkit n'est pas
-encore fait.
+enhanced (`host/src/emu.rs`, 49 instructions, pile, banques, FSR, cycles), en
+temps réel à la fréquence choisie. Continuer (F5), Pas (F11), Pas par-dessus
+(F10), Sortir, Reset, points d'arrêt dans la marge. Affiche registres du cœur,
+pile, LED des ports, RAM par banque. Périphériques (timers, ADC, interruptions)
+non simulés. Pas encore de débogage sur la vraie puce via un PICkit.
 
-## Assembleur
+## Assembleur et désassembleur
 
 `picflash asm` accepte les sources écrites pour `pic-as` (XC8) sur PIC16
 enhanced mid-range : `PROCESSOR`, `CONFIG CHAMP = VALEUR`, `#include <xc.inc>`,
@@ -139,7 +157,7 @@ enhanced mid-range : `PROCESSOR`, `CONFIG CHAMP = VALEUR`, `#include <xc.inc>`,
 `isr_vec` sont placés en 0 et 4 comme dans le Makefile du labo ; `--link
 -Wl,-pnom=adresse` place d'autres psects.
 
-Vérifié par comparaison avec `pic-as` (XC8 v3.10), boîte noire :
+Vérifié en boîte noire contre `pic-as` (XC8 v3.10) :
 
 - 4 programmes écrits à la main (dont le `blink.asm` du labo, `.hex` identique
   octet par octet) ;
@@ -153,11 +171,9 @@ Seule différence connue : un `DW` de plus de 14 bits est tronqué à 14 bits
 Non supporté : PIC18, PIC10/12 baseline, plusieurs fichiers liés ensemble,
 `IRP`, labels temporaires (`1b`/`1f`), listing `.lst`.
 
-## Désassembleur
-
 Le désassembleur couvre le cœur PIC16 enhanced (49 instructions, variantes 32
-et 64 banques vérifiées contre pic-as) et nomme les registres d'après le DFP,
-avec suivi de BSR par analyse de flot.
+et 64 banques vérifiées contre pic-as). Il nomme les registres d'après le DFP et
+suit BSR par analyse de flot.
 
 ## Structure
 
@@ -176,6 +192,17 @@ choisit VPP d'après la puce (9 V pour PIC16F1xxx). Le firmware ne connaît
 aucune famille de PIC : toute la logique est côté PC, une nouvelle famille ne
 demande pas de reflasher la carte.
 
+## Firmware
+
+Brancher la carte (ou le Pico) en maintenant BOOTSEL, puis copier sur le disque
+RPI-RP2 `picflash-firmware.uf2` (carte) ou `picflash-firmware-pico.uf2`
+(prototype Pi Pico).
+
+```sh
+cd firmware && cargo build --release                                    # carte
+cd firmware && cargo build --release --no-default-features --features pico --target-dir target-pico
+```
+
 ## Câblage (prototype Pi Pico)
 
 | Pico            | PIC16F1789 (PDIP-40)    | Connecteur ICSP / PICkit |
@@ -191,33 +218,6 @@ demande pas de reflasher la carte.
 - LVP doit rester actif (`CONFIG LVP = ON`). `picflash write` refuse une config
   qui coupe LVP, sauf `--allow-lvp-off` (il faudrait alors un programmeur HV).
 
-## Utilisation
-
-```sh
-# Firmware : brancher la carte (ou le Pico) en maintenant BOOTSEL, puis copier
-# sur le disque RPI-RP2 :
-#   picflash-firmware.uf2       carte picflash
-#   picflash-firmware-pico.uf2  prototype Pi Pico
-cd firmware && cargo build --release                                    # carte
-cd firmware && cargo build --release --no-default-features --features pico --target-dir target-pico
-
-# Hôte
-cargo install --path host
-picflash ping
-picflash id
-picflash write blink.hex                  # erase + write + verify + run
-picflash read dump.hex
-```
-
-Dans le `Makefile` du lab :
-
-```make
-PROGRAMMER ?= PPF                       # PSIM = simulateur
-IPECMD ?= $(HOME)/.cargo/bin/picflash-ipecmd
-flash: $(EXEC)
-	$(IPECMD) $(FLASH_ARGS)             # FLASH_ARGS d'IPE inchangés
-```
-
 ## Tests
 
 ```sh
@@ -230,12 +230,6 @@ fenêtres busy (commande pendant une écriture = erreur). Testé par mutation :
 inverser l'ordre de la clé, oublier le 33e coup d'horloge, ne pas décaler le
 payload, lire en LSb first, sauter une attente ou effacer depuis le mauvais PC
 fait échouer les tests. Il ne remplace pas un test sur vraie puce.
-
-## État
-
-Testé uniquement sur un PIC simulé : ni le PICkit, ni la carte, ni le firmware
-n'ont encore tourné sur du vrai matériel. La carte (`hardware/`) n'a pas été
-fabriquée. Développé avec l'aide de Claude (Anthropic).
 
 ## Licence
 

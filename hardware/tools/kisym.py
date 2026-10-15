@@ -1,4 +1,5 @@
 """Minimal KiCad s-expression reader/writer and symbol-library access."""
+import copy
 import re
 from pathlib import Path
 
@@ -68,7 +69,6 @@ def library(lib):
 
 def symbol(libid):
     """Flattened copy of a library symbol, renamed to its lib id."""
-    import copy
     lib, name = libid.split(":")
     s = copy.deepcopy(library(lib)[name])
     ext = first(s, "extends")

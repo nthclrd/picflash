@@ -1,4 +1,4 @@
-"""Random pic-as programs for differential testing. Usage: gen.py OUTDIR N SEED"""
+"""Random pic-as programs for differential testing. Usage: fuzz_gen.py OUTDIR N SEED"""
 import random, sys, os
 out, n, seed = sys.argv[1], int(sys.argv[2]), int(sys.argv[3])
 PARTS = [("16F1789", 32), ("16F1509", 32), ("16F18877", 64), ("16F18446", 64)]

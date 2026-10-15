@@ -4,6 +4,8 @@ Connections are made with net labels on a short wire stub at every pin, so
 the netlist here is the single source of truth. Run, then check with
 `kicad-cli sch erc` and `check_netlist.py`.
 """
+import copy
+import json
 import sys
 import uuid
 from pathlib import Path
@@ -124,19 +126,15 @@ notes.append((20, 192, "Lignes ICSP : SN74LVC1T45 (1,65-5,5 V côté cible). DIR
 notes.append((20, 197, "entrée (haute impédance) au démarrage. 100R série vers le connecteur."))
 for i, (line, out) in enumerate([("PGC", "ICSP_PGC"), ("PGD", "ICSP_PGD"), ("AUX", "ICSP_AUX"),
                                  ("TDI", "ICSP_TDI"), ("TMS", "ICSP_TMS"), ("MCLR_LV", None)]):
-    x = 30.48 + 63.5 * (i % 6) if i < 6 else 0
-    y = 220.98
-    u = f"U{5 + i}"
+    x, y = 30.48 + 63.5 * i, 220.98
+    part(f"U{5 + i}", "Logic_LevelTranslator:SN74LVC1T45DBV", "SN74LVC1T45DBV", None, (x, y),
+         {"1": "+3V3", "2": "GND", "3": f"{line}_A", "4": f"{line}_B", "5": f"{line}_DIR", "6": "TVDD"})
     if out:
-        part(u, "Logic_LevelTranslator:SN74LVC1T45DBV", "SN74LVC1T45DBV", None, (x, y),
-             {"1": "+3V3", "2": "GND", "3": f"{line}_A", "4": f"{line}_B", "5": f"{line}_DIR", "6": "TVDD"})
         row(x - 12.7, y + 27.94, [("R", f"R{20 + 2 * i}", "100", f"{line}_B", out),
                                  ("R", f"R{21 + 2 * i}", "10k", f"{line}_DIR", "GND"),
                                  ("C", f"C{20 + 2 * i}", "100n", "+3V3", "GND"),
                                  ("C", f"C{21 + 2 * i}", "100n", "TVDD", "GND")])
     else:
-        part(u, "Logic_LevelTranslator:SN74LVC1T45DBV", "SN74LVC1T45DBV", None, (x, y),
-             {"1": "+3V3", "2": "GND", "3": "MCLR_LV_A", "4": "MCLR_LV_B", "5": "MCLR_LV_DIR", "6": "TVDD"})
         row(x - 12.7, y + 27.94, [("R", "R30", "100k", "MCLR_LV_A", "GND"),
                                  ("C", "C30", "100n", "+3V3", "GND"),
                                  ("C", "C31", "100n", "TVDD", "GND"),
@@ -242,7 +240,6 @@ def geometry_check(segments):
 
 
 def lib_prop(sym, name, value, X, Y, hide):
-    import copy
     q = copy.deepcopy(next(e for e in kisym.find(sym, "property") if e[1] == name))
     q[2] = value
     at = kisym.first(q, "at")
@@ -329,7 +326,6 @@ def build():
            [Sym("lib_symbols"), *libs.values()], *items,
            [Sym("sheet_instances"), [Sym("path"), "/", [Sym("page"), "1"]]]]
     OUT.write_text(kisym.dump(doc) + "\n")
-    import json
     (OUT.parent / "netlist.json").write_text(json.dumps(
         {p["ref"]: {k: v for k, v in p["nets"].items() if v} for p in parts if not p["ref"].startswith("#")},
         indent=1, sort_keys=True))
