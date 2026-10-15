@@ -7,7 +7,7 @@ Snap.
 
 Algorithmes écrits depuis les *Memory Programming Specifications* publiques
 (PIC16(L)F178X, PIC16(L)F184XX DS40001970), recoupés avec les séquences des
-scripts PICkit 4 (voir `docs/ipe-architecture.md`). Les paramètres de chaque
+scripts PICkit 4 (voir `docs/pickit-gen4.md`). Les paramètres de chaque
 part (mémoire, IDs, config, registres, bits) viennent d'une base embarquée
 (`host/data/devices.json.gz`) extraite des device packs Microchip, sous licence
 Apache-2.0 (`host/data/LICENSE-microchip-dfp.txt`). Aucun code, script ni
@@ -230,3 +230,14 @@ fenêtres busy (commande pendant une écriture = erreur). Testé par mutation :
 inverser l'ordre de la clé, oublier le 33e coup d'horloge, ne pas décaler le
 payload, lire en LSb first, sauter une attente ou effacer depuis le mauvais PC
 fait échouer les tests. Il ne remplace pas un test sur vraie puce.
+
+## État
+
+Testé uniquement sur un PIC simulé : ni le PICkit, ni la carte, ni le firmware
+n'ont encore tourné sur du vrai matériel. La carte (`hardware/`) n'a pas été
+fabriquée. Développé avec l'aide de Claude (Anthropic).
+
+## Licence
+
+MIT, voir `LICENSE`. Les données de puces embarquées (`host/data/`) viennent
+des device packs Microchip, sous Apache-2.0 (`host/data/LICENSE-microchip-dfp.txt`).

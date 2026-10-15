@@ -7,3 +7,6 @@ __pycache__/
 fp-info-cache
 *-backups/
 target-pico/
+
+# Notes privées (analyse des outils Microchip) : jamais publiées
+docs/ipe-architecture.md

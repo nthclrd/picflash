@@ -12,8 +12,7 @@
 //! - USB framing, tool IDs and power commands: avrdude `src/pickit5.c` and
 //!   `src/usbdevs.h` (GPL-2; protocol facts only).
 //! - VPP level select for high-voltage entry (0x41) and the order of the
-//!   entry steps: compared with the PICkit 4 script sequences in MPLAB X
-//!   (see `docs/ipe-architecture.md`).
+//!   entry steps: compared with the PICkit 4 script sequences in MPLAB X.
 //! - Operand units, power and VPP behaviour, read routing and error codes:
 //!   static analysis of the PICkit 4/5/Basic firmware for interoperability
 //!   (REA + Ghidra), summarised in `docs/pickit-gen4.md`.
