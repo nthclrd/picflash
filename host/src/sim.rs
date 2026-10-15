@@ -55,6 +55,9 @@ pub struct SimPic {
 /// 8-bit parts map the data EEPROM here.
 const EEPROM_BASE: u32 = 0xF000;
 
+/// Waiting for a command.
+const IDLE: Phase = Phase::Command { acc: 0, n: 0 };
+
 impl SimPic {
     /// A blank part matching `device`: its IDs, memory layout and wait
     /// times. Commands arriving sooner than the device's waits fail.
@@ -163,12 +166,12 @@ impl SimPic {
                     // The last key bit is a don't care.
                     ensure!(bits >> 1 == KEY >> 1, "bad LVP key {bits:#010x} (8-bit, MSb first)");
                     self.pc = 0;
-                    Phase::Command { acc: 0, n: 0 }
+                    IDLE
                 }
             }
             Phase::KeyTail => {
                 self.pc = 0;
-                Phase::Command { acc: 0, n: 0 }
+                IDLE
             }
             Phase::Command { acc, n } => {
                 let acc = self.shift(acc, n, bit);
@@ -192,7 +195,7 @@ impl SimPic {
                         acc >> 1
                     };
                     self.execute(cmd, data);
-                    Phase::Command { acc: 0, n: 0 }
+                    IDLE
                 }
             }
             Phase::DataOut { .. } => bail!("host drove ICSPDAT during a read"),
@@ -214,7 +217,7 @@ impl SimPic {
             if then_increment {
                 self.pc += 1;
             }
-            Phase::Command { acc: 0, n: 0 }
+            IDLE
         };
         Ok(bit)
     }
@@ -232,7 +235,6 @@ impl SimPic {
             n: 0,
             then_increment,
         };
-        let idle = Phase::Command { acc: 0, n: 0 };
         Ok(match (self.six(), cmd) {
             (true, 0x00 | 0x02 | 0x03) | (false, 0x80 | 0x00 | 0x02) => {
                 Phase::DataIn { cmd, acc: 0, n: 0 }
@@ -243,30 +245,30 @@ impl SimPic {
             }
             (true, 0x11) | (false, 0xF0) => {
                 self.row_erase()?;
-                idle
+                IDLE
             }
             (true, 0x04) | (false, 0xFC) => read(self, false),
             (false, 0xFE) => read(self, true),
             (true, 0x06) | (false, 0xF8) => {
                 self.pc += 1;
-                idle
+                IDLE
             }
             (true, 0x16) => {
                 self.pc = 0;
-                idle
+                IDLE
             }
             (true, 0x08) | (false, 0xE0) => {
                 self.program();
-                idle
+                IDLE
             }
             (true, 0x09) | (false, 0x18) => {
                 self.bulk_erase()?;
-                idle
+                IDLE
             }
             (true, 0x0B) => {
                 self.eeprom.fill(0xFF);
                 self.busy_until_us = self.now_us + self.t_erase;
-                idle
+                IDLE
             }
             _ => bail!("unexpected command {cmd:#04x}"),
         })
@@ -375,7 +377,7 @@ impl Transport for SimPic {
                 op::ENTER => self.phase = Phase::Key { bits: 0, n: 0 },
                 op::ENTER_HV => {
                     self.pc = 0;
-                    self.phase = Phase::Command { acc: 0, n: 0 };
+                    self.phase = IDLE;
                 }
                 op::RELEASE => self.phase = Phase::Running,
                 op::OUT => {
@@ -440,7 +442,7 @@ impl crate::pickit::Gen4 for Gen4Sim {
                 g4::VPP_ON => {
                     if self.vpp_program {
                         self.pic.pc = 0;
-                        self.pic.phase = Phase::Command { acc: 0, n: 0 };
+                        self.pic.phase = IDLE;
                     } else {
                         self.pic.phase = Phase::Running;
                     }
