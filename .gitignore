@@ -3,3 +3,6 @@ target/
 .DS_Store
 hardware/build/
 __pycache__/
+*.kicad_prl
+fp-info-cache
+*-backups/

@@ -136,10 +136,11 @@ for i, (line, out) in enumerate([("PGC", "ICSP_PGC"), ("PGD", "ICSP_PGD"), ("AUX
                                  ("C", f"C{21 + 2 * i}", "100n", "TVDD", "GND")])
     else:
         part(u, "Logic_LevelTranslator:SN74LVC1T45DBV", "SN74LVC1T45DBV", None, (x, y),
-             {"1": "+3V3", "2": "GND", "3": "MCLR_LV_A", "4": "MCLR_LV_B", "5": "+3V3", "6": "TVDD"})
+             {"1": "+3V3", "2": "GND", "3": "MCLR_LV_A", "4": "MCLR_LV_B", "5": "MCLR_LV_DIR", "6": "TVDD"})
         row(x - 12.7, y + 27.94, [("R", "R30", "100k", "MCLR_LV_A", "GND"),
                                  ("C", "C30", "100n", "+3V3", "GND"),
-                                 ("C", "C31", "100n", "TVDD", "GND")])
+                                 ("C", "C31", "100n", "TVDD", "GND"),
+                                 ("R", "R31", "10k", "+3V3", "MCLR_LV_DIR")])
         two("D5", "Device:D_Schottky", "BAT54WS", "Diode_SMD:D_SOD-323", (x + 22.86, y + 27.94),
             "MCLR", "MCLR_LV_B")
 
@@ -147,6 +148,7 @@ for i, (line, out) in enumerate([("PGC", "ICSP_PGC"), ("PGD", "ICSP_PGD"), ("AUX
 notes.append((20, 150, "VPP : MT3608, 6-14 V réglé par PWM filtré injecté dans FB, mesuré sur ADC1."))
 part("U11", "Regulator_Switching:MT3608", "MT3608", SOT23_6, (50.8, 170.18),
      {"5": "+5V", "2": "GND", "4": "BOOST_EN", "1": "SW", "3": "VPP_FB", "6": None}, "C84817")
+c("C43", "10u", (27.94, 170.18), "+5V", "GND", C0805)   # MT3608 input
 two("L1", "Device:L", "22uH", "Inductor_SMD:L_Cenker_CKCS4030", (78.74, 160.02), "+5V", "SW")
 two("D1", "Device:D_Schottky", "SS34", "Diode_SMD:D_SMA", (99.06, 160.02), "VPP_RAW", "SW", "C8678")
 row(109.22, 170.18, [("C", "C40", "22u 25V", "VPP_RAW", "GND", C1206), ("R", "R40", "200k", "VPP_RAW", "VPP_FB"),
@@ -168,13 +170,13 @@ row(287.02, 170.18, [("R", "R48", "10k", "VPP_RAW", "VPP_G"), ("R", "R49", "10k"
                      ("R", "R52", "100", "MCLR", "ICSP_MCLR")])
 
 # --- Target VDD -----------------------------------------------------------
-notes.append((322, 142, "VDD cible : TLV75801, 1,5-5 V"))
+notes.append((322, 142, "VDD cible : TLV75801, 1,5-4,85 V"))
 notes.append((322, 147, "PWM sur FB, EN tiré à 0, ADC0"))
 part("U12", "Regulator_Linear:TLV75801PDBV", "TLV75801PDBV", None, (342.9, 172.72),
      {"1": "+5V", "2": "GND", "3": "VT_EN", "4": "VT_FB", "5": "TVDD"})
 row(363.22, 160.02, [("C", "C50", "1u", "+5V", "GND"), ("C", "C51", "1u", "TVDD", "GND"),
                      ("R", "R60", "56k", "TVDD", "VT_FB"), ("R", "R61", "10k", "VT_FB", "GND"),
-                     ("R", "R62", "22k", "VT_FB", "VT_DAC"), ("R", "R63", "10k", "VT_PWM", "VT_DAC")])
+                     ("R", "R62", "15k", "VT_FB", "VT_DAC"), ("R", "R63", "10k", "VT_PWM", "VT_DAC")])
 row(363.22, 187.96, [("C", "C52", "1u", "VT_DAC", "GND"), ("R", "R64", "100k", "VT_EN", "GND"),
                      ("R", "R66", "68k", "VT_ADC", "GND"), ("C", "C53", "100n", "VT_ADC", "GND"),
                      ("R", "R65", "100k", "TVDD", "VT_ADC")])
@@ -248,18 +250,20 @@ def build():
         fp = p["fp"]
         if fp is None:
             fp = next(q[2] for q in kisym.find(s, "property") if q[1] == "Footprint")
+        p["fp_resolved"] = fp
         pins = kisym.pins(s)
         names = {n for n, *_ in pins}
         missing = set(p["nets"]) - names
         assert not missing, (p["ref"], missing)
         is_power = p["lib"].startswith("power:")
+        no_bom = is_power or p["lib"] == "Connector:TestPoint"
         props = [lib_prop(s, "Reference", p["ref"], X, Y, is_power),
                  lib_prop(s, "Value", p["value"], X, Y, is_power or p["lib"] == "Connector:TestPoint"),
                  prop("Footprint", fp, (X, Y), True), prop("Datasheet", "", (X, Y), True)]
         if p["lcsc"]:
             props.append(prop("LCSC", p["lcsc"], (X, Y), True))
         sym = [Sym("symbol"), [Sym("lib_id"), p["lib"]], [Sym("at"), X, Y, 0], [Sym("unit"), 1],
-               [Sym("exclude_from_sim"), Sym("no")], [Sym("in_bom"), Sym("no" if is_power else "yes")],
+               [Sym("exclude_from_sim"), Sym("no")], [Sym("in_bom"), Sym("no" if no_bom else "yes")],
                [Sym("on_board"), Sym("no" if is_power else "yes")], [Sym("dnp"), Sym("no")],
                [Sym("uuid"), uid(p["ref"])], *props]
         sym += [[Sym("pin"), n, [Sym("uuid"), uid(p["ref"], "pin", n)]] for n in sorted(names)]
@@ -313,6 +317,10 @@ def build():
     (OUT.parent / "netlist.json").write_text(json.dumps(
         {p["ref"]: {k: v for k, v in p["nets"].items() if v} for p in parts if not p["ref"].startswith("#")},
         indent=1, sort_keys=True))
+    (OUT.parent / "parts.json").write_text(json.dumps(
+        {p["ref"]: dict(fp=p["fp_resolved"], value=p["value"], lcsc=p["lcsc"], uuid=uid(p["ref"]),
+                        nets={k: v for k, v in p["nets"].items() if v})
+         for p in parts if not p["ref"].startswith("#")}, indent=1, sort_keys=True))
     print(f"{OUT.name}: {len(parts)} symboles")
 
 

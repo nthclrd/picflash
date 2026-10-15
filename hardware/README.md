@@ -25,9 +25,9 @@ une autre), et `check_netlist.py` vérifie que chaque broche est sur le bon net.
 | 3,3 V | U3 AP2112K | logique |
 | MCU | U1 RP2040, U4 flash 16 Mbit, Y1 12 MHz, SW1 BOOTSEL, SW2 RESET, J3 SWD | |
 | Lignes ICSP | U5-U9 SN74LVC1T45 | 1,65-5,5 V côté cible ; DIR tiré à 0 = cible en haute impédance au démarrage |
-| VPP | U11 MT3608, 6-14 V | réglé par PWM filtré injecté dans FB, mesuré sur ADC1 |
+| VPP | U11 MT3608 (C43 en entrée), 6,7-13,9 V | réglé par PWM filtré injecté dans FB, mesuré sur ADC1 |
 | MCLR | Q1 (VPP via R53 220R), U10 + D5 (niveau VDD, LVP), Q3 (masse) | aucun actif = MCLR relâché |
-| VDD cible | U12 TLV75801, 1,5-5 V | réglé par PWM sur FB, EN tiré à 0, mesuré sur ADC0 |
+| VDD cible | U12 TLV75801, 1,5-4,86 V (limité par la chute du régulateur sous 5 V USB) | réglé par PWM sur FB, EN tiré à 0, mesuré sur ADC0 |
 | Connecteur | J2 8 broches | brochage PICkit 4/5 : 1 MCLR, 2 VDD, 3 GND, 4 PGD, 5 PGC, 6 AUX, 7 TDI, 8 TMS |
 
 ## Brochage RP2040 (à reporter dans le firmware)
@@ -51,7 +51,10 @@ DIR = 1 : RP2040 vers la cible ; DIR = 0 : la cible est lue (et haute impédance
 - Ne jamais activer VPP_ON et MCLR_PD en même temps (R53 limite à ~60 mA).
 - Régler VT_PWM avant VT_EN ; vérifier sur ADC0 qu'aucune alimentation externe
   n'est présente avant d'activer VT_EN.
-- Régler VPP en boucle fermée sur ADC1 avant VPP_ON ; PWM à 0 = tension max.
+- Régler VPP en boucle fermée sur ADC1 avant VPP_ON ; PWM à 0 = tension max
+  (13,9 V), alors que beaucoup de PIC16 n'acceptent que 9 V : ne jamais
+  activer BOOST_EN avant d'avoir fixé le PWM.
+- Même chose pour VT_EN : PWM à 0 = 4,86 V.
 
 ## Points ouverts
 
@@ -63,4 +66,35 @@ DIR = 1 : RP2040 vers la cible ; DIR = 0 : la cible est lue (et haute impédance
   du MT3608 avec l'injection PWM dans FB.
 - Le firmware actuel cible un Pi Pico (GP2/GP3/GP4) : il faut le porter sur ce
   brochage et ajouter le pilotage VPP/VDD.
-- PCB (placement, routage, DRC, Gerber) pas encore fait.
+- PCB : routé automatiquement, à relire à l'œil avant commande (voir ci-dessous).
+
+## PCB
+
+Carte 72 × 44 mm, 4 couches : F.Cu et B.Cu pour les signaux, In1 plan de
+masse et In2 plan +3,3 V pleins (déclarés « power » : l'autorouteur n'y passe
+pas). Composants sur une seule face pour l'assemblage JLCPCB.
+
+```sh
+make all FREEROUTING=/chemin/freerouting-2.4.1.jar
+```
+
+| Étape | Outil | Résultat |
+|-------|-------|----------|
+| `pcb` | `tools/gen_pcb.py` (pcbnew) | composants principaux placés par blocs, passifs placés près de leurs voisins, anneau libre autour du RP2040 ; via + piste courte vers les plans pour chaque pastille GND/+3V3 (`tools/fanout.py`) |
+| `route` | `tools/dsn_filter.py` + Freerouting 2.4.1 | signaux seulement (GND/+3V3 passent par les plans), 0 connexion non routée |
+| `finish` | `tools/finish_pcb.py` | import du routage, mêmes vias de plan rejoués à l'identique, plans de masse F/B, remplissage |
+| `check` | `kicad-cli` | ERC 0 ; DRC 0 erreur, 0 non connecté, 21 avertissements (sérigraphie rognée, broches non connectées) |
+| `fab` | `tools/export_fab.py` | `fab/` : Gerber + perçages (zip), BOM, CPL au format JLCPCB |
+
+Règles : piste 0,2 mm (0,1 mm mini en entrée de pastille), isolement 0,15 mm,
+via 0,6/0,3 mm ; classe « Power » (VBUS, +5V, TVDD, SW, VPP_RAW) en 0,4 mm,
+isolement 0,2 mm, via 0,8/0,4 mm. Compatibles JLCPCB 4 couches.
+
+### Avant de commander
+
+- Relire le routage dans KiCad : retour de masse sous l'USB, boucle du MT3608
+  (SW, L1, D1, C40 courte), pistes VPP/MCLR.
+- Compléter les références LCSC manquantes de `fab/picflash-bom.csv`.
+- Vérifier les rotations du CPL dans l'aperçu JLCPCB (elles diffèrent
+  parfois entre KiCad et leur bibliothèque).
+- Le connecteur J2 est traversant : assemblage THT JLCPCB ou soudure à la main.

@@ -5654,7 +5654,7 @@
     (at 320.04 83.82 0)
     (unit 1)
     (exclude_from_sim no)
-    (in_bom yes)
+    (in_bom no)
     (on_board yes)
     (dnp no)
     (uuid "eb318953-7d1d-5f5d-9ec2-e6eb82806b3e")
@@ -5697,7 +5697,7 @@
     (at 327.66 83.82 0)
     (unit 1)
     (exclude_from_sim no)
-    (in_bom yes)
+    (in_bom no)
     (on_board yes)
     (dnp no)
     (uuid "6e68b7f3-03bb-5664-b327-56a7a718fad2")
@@ -5740,7 +5740,7 @@
     (at 335.28 83.82 0)
     (unit 1)
     (exclude_from_sim no)
-    (in_bom yes)
+    (in_bom no)
     (on_board yes)
     (dnp no)
     (uuid "17a2a1f8-4c5d-56ed-b8ad-d2f87625d350")
@@ -5783,7 +5783,7 @@
     (at 342.9 83.82 0)
     (unit 1)
     (exclude_from_sim no)
-    (in_bom yes)
+    (in_bom no)
     (on_board yes)
     (dnp no)
     (uuid "1db50659-6fe2-5a90-a2cb-535e1cb63e9b")
@@ -5826,7 +5826,7 @@
     (at 350.52 83.82 0)
     (unit 1)
     (exclude_from_sim no)
-    (in_bom yes)
+    (in_bom no)
     (on_board yes)
     (dnp no)
     (uuid "7545de88-8fbd-5093-ad12-a0cf513fc1d8")
@@ -7771,7 +7771,7 @@
     (stroke (width 0) (type default))
     (uuid "93244e41-4f0e-5805-9c38-596d23353cda"))
   (label
-    "+3V3"
+    "MCLR_LV_DIR"
     (at 335.28 226.06 180)
     (effects (font (size 1.27 1.27)) (justify right bottom))
     (uuid "f9b71caa-5b32-5810-9f72-d19c2393d538"))
@@ -7944,6 +7944,59 @@
     (effects (font (size 1.27 1.27)) (justify right bottom))
     (uuid "1741c6b1-38a4-579b-8bbe-19393655d699"))
   (symbol
+    (lib_id "Device:R")
+    (at 358.14 248.92 0)
+    (unit 1)
+    (exclude_from_sim no)
+    (in_bom yes)
+    (on_board yes)
+    (dnp no)
+    (uuid "26cac008-ab63-5ae0-a09b-22ea44c3b6ae")
+    (property
+      "Reference"
+      "R31"
+      (at 360.17 248.92 90)
+      (show_name no)
+      (do_not_autoplace no)
+      (effects (font (size 1.27 1.27))))
+    (property
+      "Value"
+      "10k"
+      (at 358.14 248.92 90)
+      (show_name no)
+      (do_not_autoplace no)
+      (effects (font (size 1.27 1.27))))
+    (property
+      "Footprint"
+      "Resistor_SMD:R_0603_1608Metric"
+      (at 358.14 248.92 0)
+      (effects (font (size 1.27 1.27)) (hide yes)))
+    (property "Datasheet" "" (at 358.14 248.92 0) (effects (font (size 1.27 1.27)) (hide yes)))
+    (pin "1" (uuid "294e5c9b-f29b-57bc-8dbc-429635e4c7cd"))
+    (pin "2" (uuid "b7b9f7e3-b27c-57a2-81bb-ce559c88e2b5"))
+    (instances
+      (project
+        "picflash-board"
+        (path "/e5d87253-6bb0-5339-b794-f0b5a13249f7" (reference "R31") (unit 1)))))
+  (wire
+    (pts (xy 358.14 245.11) (xy 358.14 242.57))
+    (stroke (width 0) (type default))
+    (uuid "813e74ec-a098-58e5-affb-b91cd2b86fce"))
+  (label
+    "+3V3"
+    (at 358.14 242.57 90)
+    (effects (font (size 1.27 1.27)) (justify left bottom))
+    (uuid "b6a1a7ab-1ace-5eaf-aeef-63e1be0a157e"))
+  (wire
+    (pts (xy 358.14 252.73) (xy 358.14 255.27))
+    (stroke (width 0) (type default))
+    (uuid "98490346-4b34-5f69-9468-10354a003eee"))
+  (label
+    "MCLR_LV_DIR"
+    (at 358.14 255.27 270)
+    (effects (font (size 1.27 1.27)) (justify right bottom))
+    (uuid "0f1f178b-786a-583c-bfec-8b3ddf8eea83"))
+  (symbol
     (lib_id "Device:D_Schottky")
     (at 370.84 248.92 0)
     (unit 1)
@@ -8080,6 +8133,59 @@
     (effects (font (size 1.27 1.27)) (justify right bottom))
     (uuid "869e9eb6-aa94-52c9-95b7-9a34c28ae2cc"))
   (no_connect (at 55.88 170.18) (uuid "1428e600-a367-544c-a000-3298aec66266"))
+  (symbol
+    (lib_id "Device:C")
+    (at 27.94 170.18 0)
+    (unit 1)
+    (exclude_from_sim no)
+    (in_bom yes)
+    (on_board yes)
+    (dnp no)
+    (uuid "e5a42f6f-a11a-5d6d-80c6-7885039b0884")
+    (property
+      "Reference"
+      "C43"
+      (at 28.58 167.64 0)
+      (show_name no)
+      (do_not_autoplace no)
+      (effects (font (size 1.27 1.27)) (justify left)))
+    (property
+      "Value"
+      "10u"
+      (at 28.58 172.72 0)
+      (show_name no)
+      (do_not_autoplace no)
+      (effects (font (size 1.27 1.27)) (justify left)))
+    (property
+      "Footprint"
+      "Capacitor_SMD:C_0805_2012Metric"
+      (at 27.94 170.18 0)
+      (effects (font (size 1.27 1.27)) (hide yes)))
+    (property "Datasheet" "" (at 27.94 170.18 0) (effects (font (size 1.27 1.27)) (hide yes)))
+    (pin "1" (uuid "46aaa95b-8ae2-543c-abb9-77f819cd9d7d"))
+    (pin "2" (uuid "0eef11ff-f598-51ff-9e39-a7204e329b0b"))
+    (instances
+      (project
+        "picflash-board"
+        (path "/e5d87253-6bb0-5339-b794-f0b5a13249f7" (reference "C43") (unit 1)))))
+  (wire
+    (pts (xy 27.94 166.37) (xy 27.94 163.83))
+    (stroke (width 0) (type default))
+    (uuid "eefa34c9-1cfd-57a5-92c1-6dc28cf0ce1a"))
+  (label
+    "+5V"
+    (at 27.94 163.83 90)
+    (effects (font (size 1.27 1.27)) (justify left bottom))
+    (uuid "a7f69066-bf5a-54cd-90af-69f5f8222c4c"))
+  (wire
+    (pts (xy 27.94 173.99) (xy 27.94 176.53))
+    (stroke (width 0) (type default))
+    (uuid "4763a1cb-c96e-5f94-8ce6-3ca746a24c5d"))
+  (label
+    "GND"
+    (at 27.94 176.53 270)
+    (effects (font (size 1.27 1.27)) (justify right bottom))
+    (uuid "e47a60db-e185-5ca6-8707-0672f20d7f69"))
   (symbol
     (lib_id "Device:L")
     (at 78.74 160.02 0)
@@ -9583,7 +9689,7 @@
       (effects (font (size 1.27 1.27))))
     (property
       "Value"
-      "22k"
+      "15k"
       (at 393.7 160.02 90)
       (show_name no)
       (do_not_autoplace no)
@@ -10210,7 +10316,7 @@
     (effects (font (size 2 2) (bold yes)) (justify left bottom))
     (uuid "91533597-5712-5588-b6ef-a9306c8841d2"))
   (text
-    "VDD cible : TLV75801, 1,5-5 V"
+    "VDD cible : TLV75801, 1,5-4,85 V"
     (exclude_from_sim no)
     (at 322 142 0)
     (effects (font (size 2 2) (bold yes)) (justify left bottom))
