@@ -154,11 +154,14 @@ impl Transport for SerialLink {
         self.port.read_exact(&mut payload)?;
         match payload[0] {
             status::OK => {}
-            status::UNKNOWN_OP => bail!(
-                "programmer: unknown op (the picflash board has no VPP supply: use low-voltage entry)"
-            ),
-            status::TRUNCATED => bail!("programmer: truncated script"),
-            status::REPLY_OVERFLOW => bail!("programmer: reply overflow"),
+            status::UNKNOWN_OP => bail!("carte : opération inconnue (firmware trop ancien ?)"),
+            status::TRUNCATED => bail!("carte : script tronqué"),
+            status::REPLY_OVERFLOW => bail!("carte : réponse trop longue"),
+            status::VOLTAGE_RANGE => bail!("carte : tension demandée hors de sa plage"),
+            status::VPP_FAIL => bail!("carte : VPP n'atteint pas la tension demandée (MCLR en court-circuit ?)"),
+            status::VDD_FAIL => bail!("carte : l'alimentation de la cible n'atteint pas la tension demandée (court-circuit ou trop de courant ?)"),
+            status::EXTERNAL_POWER => bail!("carte : la cible est déjà alimentée, n'active pas l'alimentation par la carte"),
+            status::NO_VPP => bail!("carte : entrée haute tension sans VPP réglé"),
             s => bail!("programmer: status {s:#04x}"),
         }
         Ok(payload[1..]

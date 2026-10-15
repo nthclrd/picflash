@@ -20,7 +20,8 @@ désassemble seul (vérifié en interdisant l'accès à `/Applications/microchip
 
 | Outil            | Entrée basse tension (LVP) | Haute tension (VPP) | Alimente la cible |
 |------------------|:--:|:--:|:--:|
-| carte picflash   | oui | non | non |
+| carte picflash (PCB `hardware/`) | oui | oui (défaut) | oui, 1,5-4,8 V (`--power 3.3`, `-W3.3`) |
+| prototype Pi Pico | oui | non | non |
 | PICkit 4 / 5     | oui | oui (défaut, comme IPE) | oui (`--power 5`, `-W5`) |
 | PICkit Basic     | oui | non | non |
 | MPLAB Snap       | oui | non | non |
@@ -162,16 +163,20 @@ avec suivi de BSR par analyse de flot.
 
 | Dossier     | Rôle                                                                 |
 |-------------|----------------------------------------------------------------------|
-| `protocol/` | `no_std`, partagé : protocole USB v2 (ops bit à bit)                 |
+| `protocol/` | `no_std`, partagé : protocole USB v3 (ops bit à bit, tensions)       |
 | `host/`     | CLI `picflash` : DFP, HEX, familles ICSP, erase/write/verify/read    |
-| `firmware/` | RP2040 + embassy : USB CDC, MCLR + décalage de bits                  |
+| `firmware/` | RP2040 + embassy : USB CDC, MCLR 3 états, VPP/VDD régulés (carte)    |
+| `hardware/` | carte KiCad 4 couches, fichiers JLCPCB (voir `hardware/README.md`)   |
 
-L'hôte envoie des *scripts* (≤ 4 KiB) d'ops bas niveau : `ENTER`, `RELEASE`,
-`OUT n bits (LSb/MSb first)`, `IN n bits`, `DELAY`. Le firmware ne connaît
+L'hôte envoie des *scripts* (≤ 4 KiB) d'ops bas niveau : `ENTER`, `ENTER_HV`,
+`RELEASE`, `OUT n bits (LSb/MSb first)`, `IN n bits`, `DELAY`, et sur la carte
+`SET_VPP`, `SET_VDD`, `MEASURE`, `CAPS`. Le firmware règle chaque tension en
+boucle fermée sur son ADC et coupe tout quand l'hôte se déconnecte ; picflash
+choisit VPP d'après la puce (9 V pour PIC16F1xxx). Le firmware ne connaît
 aucune famille de PIC : toute la logique est côté PC, une nouvelle famille ne
 demande pas de reflasher la carte.
 
-## Câblage (proto)
+## Câblage (prototype Pi Pico)
 
 | Pico            | PIC16F1789 (PDIP-40)    | Connecteur ICSP / PICkit |
 |-----------------|-------------------------|--------------------------|
@@ -189,8 +194,12 @@ demande pas de reflasher la carte.
 ## Utilisation
 
 ```sh
-# Firmware : brancher le Pico en maintenant BOOTSEL, puis
-cd firmware && cargo run --release        # ou copier picflash-firmware.uf2 sur RPI-RP2
+# Firmware : brancher la carte (ou le Pico) en maintenant BOOTSEL, puis copier
+# sur le disque RPI-RP2 :
+#   picflash-firmware.uf2       carte picflash
+#   picflash-firmware-pico.uf2  prototype Pi Pico
+cd firmware && cargo build --release                                    # carte
+cd firmware && cargo build --release --no-default-features --features pico --target-dir target-pico
 
 # Hôte
 cargo install --path host

@@ -1,5 +1,6 @@
 pub mod algo;
 pub mod asm;
+pub mod board;
 pub mod checksum;
 pub mod devdb;
 pub mod device;

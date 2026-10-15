@@ -95,7 +95,7 @@ part("U4", "Memory_Flash:W25Q16JVSS", "W25Q16JVSSIQ", None, (271.78, 60.96),
      {"1": "QSPI_SS", "2": "QSPI_SD1", "3": "QSPI_SD2", "4": "GND", "5": "QSPI_SD0", "6": "QSPI_SCLK",
       "7": "QSPI_SD3", "8": "+3V3"})
 part("Y1", "Device:Crystal_GND24", "12MHz", "Crystal:Crystal_SMD_3225-4Pin_3.2x2.5mm", (271.78, 99.06),
-     {"1": "XIN", "3": "XOUT_X", "2": "GND", "4": "GND"}, "C9002")
+     {"1": "XIN", "3": "XOUT_X", "2": "GND", "4": "GND"}, "C20625731")   # ABM8-272-T3, 10 pF load
 row(254, 119.38, [("C", "C4", "15p", "XIN", "GND"), ("C", "C5", "15p", "XOUT_X", "GND"),
                   ("R", "R7", "1k", "XOUT", "XOUT_X"), ("R", "R8", "1k", "BOOT_R", "GND")])
 part("SW1", "Switch:SW_Push", "BOOTSEL", "Button_Switch_SMD:SW_SPST_PTS810", (304.8, 119.38),
@@ -116,7 +116,7 @@ for i, net in enumerate(["DBG_TX", "DBG_RX", "VPP_RAW", "TVDD", "GND"]):
 for i, (led, sig, color) in enumerate([("D2", "+3V3", "green"), ("D3", "LED_ACT", "yellow"),
                                        ("D4", "LED_ERR", "red")]):
     x = 345.44 + 22.86 * i
-    r(f"R{10 + i}", "1k" if sig == "+3V3" else "330", (x, 119.38), sig, f"{led}_A")
+    r(f"R{10 + i}", "330", (x, 119.38), sig, f"{led}_A")
     two(led, "Device:LED", color, LED0603, (x, 134.62), "GND", f"{led}_A")
 
 # --- Level shifters ---------------------------------------------------------
@@ -191,6 +191,22 @@ part("J2", "Connector_Generic:Conn_01x08", "ICSP", "Connector_PinSocket_2.54mm:P
 # --- Power flags ----------------------------------------------------------
 for i, net in enumerate(["GND", "+5V", "VBUS"]):
     part(f"#FLG{i + 1}", "power:PWR_FLAG", "PWR_FLAG", "", (134.62 + 7.62 * i, 76.2), {"1": net})
+
+
+# --- JLCPCB parts (checked against the JLCPCB catalog, 2026-10-15) ---------
+LCSC = {
+    "100": "C22775", "100k": "C25803", "100n": "C14663", "10k": "C25804", "10u": "C15850",
+    "15k": "C22809", "15p": "C1644", "1k": "C21190", "1u": "C15849", "200k": "C25811",
+    "220": "C22962", "22k": "C31850", "22u 10V": "C45783", "22u 25V": "C12891",
+    "22uH": "C354592", "27": "C25190", "330": "C23138", "47k": "C25819", "5.1k": "C23186",
+    "500mA": "C720075", "56k": "C23206", "68k": "C23231", "82k": "C23254",
+    "BAT54WS": "C7502694", "BOOTSEL": "C221896", "RESET": "C221896", "ICSP": "C22436149",
+    "SWD": "C22438100", "SN74LVC1T45DBV": "C7843", "TLV75801PDBV": "C2877852",
+    "W25Q16JVSSIQ": "C131025", "green": "C12624", "red": "C2286", "yellow": "C2287",
+}
+for _p in parts:
+    if not _p["lcsc"] and not _p["ref"].startswith(("#", "TP")):
+        _p["lcsc"] = LCSC[_p["value"]]
 
 
 # ===========================================================================

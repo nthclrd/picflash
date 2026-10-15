@@ -1,7 +1,7 @@
 {
  "C1": {
   "fp": "Capacitor_SMD:C_0603_1608Metric",
-  "lcsc": "",
+  "lcsc": "C15849",
   "nets": {
    "1": "+5V",
    "2": "GND"
@@ -11,7 +11,7 @@
  },
  "C10": {
   "fp": "Capacitor_SMD:C_0603_1608Metric",
-  "lcsc": "",
+  "lcsc": "C14663",
   "nets": {
    "1": "+3V3",
    "2": "GND"
@@ -21,7 +21,7 @@
  },
  "C11": {
   "fp": "Capacitor_SMD:C_0603_1608Metric",
-  "lcsc": "",
+  "lcsc": "C14663",
   "nets": {
    "1": "+3V3",
    "2": "GND"
@@ -31,7 +31,7 @@
  },
  "C12": {
   "fp": "Capacitor_SMD:C_0603_1608Metric",
-  "lcsc": "",
+  "lcsc": "C14663",
   "nets": {
    "1": "+3V3",
    "2": "GND"
@@ -41,7 +41,7 @@
  },
  "C13": {
   "fp": "Capacitor_SMD:C_0603_1608Metric",
-  "lcsc": "",
+  "lcsc": "C14663",
   "nets": {
    "1": "+3V3",
    "2": "GND"
@@ -51,7 +51,7 @@
  },
  "C14": {
   "fp": "Capacitor_SMD:C_0603_1608Metric",
-  "lcsc": "",
+  "lcsc": "C15849",
   "nets": {
    "1": "+3V3",
    "2": "GND"
@@ -61,7 +61,7 @@
  },
  "C15": {
   "fp": "Capacitor_SMD:C_0603_1608Metric",
-  "lcsc": "",
+  "lcsc": "C15849",
   "nets": {
    "1": "+1V1",
    "2": "GND"
@@ -71,7 +71,7 @@
  },
  "C16": {
   "fp": "Capacitor_SMD:C_0603_1608Metric",
-  "lcsc": "",
+  "lcsc": "C14663",
   "nets": {
    "1": "+1V1",
    "2": "GND"
@@ -81,7 +81,7 @@
  },
  "C17": {
   "fp": "Capacitor_SMD:C_0603_1608Metric",
-  "lcsc": "",
+  "lcsc": "C14663",
   "nets": {
    "1": "+1V1",
    "2": "GND"
@@ -91,7 +91,7 @@
  },
  "C2": {
   "fp": "Capacitor_SMD:C_0805_2012Metric",
-  "lcsc": "",
+  "lcsc": "C15850",
   "nets": {
    "1": "+3V3",
    "2": "GND"
@@ -101,7 +101,7 @@
  },
  "C20": {
   "fp": "Capacitor_SMD:C_0603_1608Metric",
-  "lcsc": "",
+  "lcsc": "C14663",
   "nets": {
    "1": "+3V3",
    "2": "GND"
@@ -111,7 +111,7 @@
  },
  "C21": {
   "fp": "Capacitor_SMD:C_0603_1608Metric",
-  "lcsc": "",
+  "lcsc": "C14663",
   "nets": {
    "1": "TVDD",
    "2": "GND"
@@ -121,7 +121,7 @@
  },
  "C22": {
   "fp": "Capacitor_SMD:C_0603_1608Metric",
-  "lcsc": "",
+  "lcsc": "C14663",
   "nets": {
    "1": "+3V3",
    "2": "GND"
@@ -131,7 +131,7 @@
  },
  "C23": {
   "fp": "Capacitor_SMD:C_0603_1608Metric",
-  "lcsc": "",
+  "lcsc": "C14663",
   "nets": {
    "1": "TVDD",
    "2": "GND"
@@ -141,7 +141,7 @@
  },
  "C24": {
   "fp": "Capacitor_SMD:C_0603_1608Metric",
-  "lcsc": "",
+  "lcsc": "C14663",
   "nets": {
    "1": "+3V3",
    "2": "GND"
@@ -151,7 +151,7 @@
  },
  "C25": {
   "fp": "Capacitor_SMD:C_0603_1608Metric",
-  "lcsc": "",
+  "lcsc": "C14663",
   "nets": {
    "1": "TVDD",
    "2": "GND"
@@ -161,7 +161,7 @@
  },
  "C26": {
   "fp": "Capacitor_SMD:C_0603_1608Metric",
-  "lcsc": "",
+  "lcsc": "C14663",
   "nets": {
    "1": "+3V3",
    "2": "GND"
@@ -171,7 +171,7 @@
  },
  "C27": {
   "fp": "Capacitor_SMD:C_0603_1608Metric",
-  "lcsc": "",
+  "lcsc": "C14663",
   "nets": {
    "1": "TVDD",
    "2": "GND"
@@ -181,7 +181,7 @@
  },
  "C28": {
   "fp": "Capacitor_SMD:C_0603_1608Metric",
-  "lcsc": "",
+  "lcsc": "C14663",
   "nets": {
    "1": "+3V3",
    "2": "GND"
@@ -191,7 +191,7 @@
  },
  "C29": {
   "fp": "Capacitor_SMD:C_0603_1608Metric",
-  "lcsc": "",
+  "lcsc": "C14663",
   "nets": {
    "1": "TVDD",
    "2": "GND"
@@ -201,7 +201,7 @@
  },
  "C3": {
   "fp": "Capacitor_SMD:C_0805_2012Metric",
-  "lcsc": "",
+  "lcsc": "C45783",
   "nets": {
    "1": "+5V",
    "2": "GND"
@@ -211,7 +211,7 @@
  },
  "C30": {
   "fp": "Capacitor_SMD:C_0603_1608Metric",
-  "lcsc": "",
+  "lcsc": "C14663",
   "nets": {
    "1": "+3V3",
    "2": "GND"
@@ -221,7 +221,7 @@
  },
  "C31": {
   "fp": "Capacitor_SMD:C_0603_1608Metric",
-  "lcsc": "",
+  "lcsc": "C14663",
   "nets": {
    "1": "TVDD",
    "2": "GND"
@@ -231,7 +231,7 @@
  },
  "C4": {
   "fp": "Capacitor_SMD:C_0603_1608Metric",
-  "lcsc": "",
+  "lcsc": "C1644",
   "nets": {
    "1": "XIN",
    "2": "GND"
@@ -241,7 +241,7 @@
  },
  "C40": {
   "fp": "Capacitor_SMD:C_1206_3216Metric",
-  "lcsc": "",
+  "lcsc": "C12891",
   "nets": {
    "1": "VPP_RAW",
    "2": "GND"
@@ -251,7 +251,7 @@
  },
  "C41": {
   "fp": "Capacitor_SMD:C_0603_1608Metric",
-  "lcsc": "",
+  "lcsc": "C15849",
   "nets": {
    "1": "VPP_DAC",
    "2": "GND"
@@ -261,7 +261,7 @@
  },
  "C42": {
   "fp": "Capacitor_SMD:C_0603_1608Metric",
-  "lcsc": "",
+  "lcsc": "C14663",
   "nets": {
    "1": "VPP_SENSE",
    "2": "GND"
@@ -271,7 +271,7 @@
  },
  "C43": {
   "fp": "Capacitor_SMD:C_0805_2012Metric",
-  "lcsc": "",
+  "lcsc": "C15850",
   "nets": {
    "1": "+5V",
    "2": "GND"
@@ -281,7 +281,7 @@
  },
  "C5": {
   "fp": "Capacitor_SMD:C_0603_1608Metric",
-  "lcsc": "",
+  "lcsc": "C1644",
   "nets": {
    "1": "XOUT_X",
    "2": "GND"
@@ -291,7 +291,7 @@
  },
  "C50": {
   "fp": "Capacitor_SMD:C_0603_1608Metric",
-  "lcsc": "",
+  "lcsc": "C15849",
   "nets": {
    "1": "+5V",
    "2": "GND"
@@ -301,7 +301,7 @@
  },
  "C51": {
   "fp": "Capacitor_SMD:C_0603_1608Metric",
-  "lcsc": "",
+  "lcsc": "C15849",
   "nets": {
    "1": "TVDD",
    "2": "GND"
@@ -311,7 +311,7 @@
  },
  "C52": {
   "fp": "Capacitor_SMD:C_0603_1608Metric",
-  "lcsc": "",
+  "lcsc": "C15849",
   "nets": {
    "1": "VT_DAC",
    "2": "GND"
@@ -321,7 +321,7 @@
  },
  "C53": {
   "fp": "Capacitor_SMD:C_0603_1608Metric",
-  "lcsc": "",
+  "lcsc": "C14663",
   "nets": {
    "1": "VT_ADC",
    "2": "GND"
@@ -331,7 +331,7 @@
  },
  "C6": {
   "fp": "Capacitor_SMD:C_0603_1608Metric",
-  "lcsc": "",
+  "lcsc": "C14663",
   "nets": {
    "1": "+3V3",
    "2": "GND"
@@ -341,7 +341,7 @@
  },
  "C7": {
   "fp": "Capacitor_SMD:C_0603_1608Metric",
-  "lcsc": "",
+  "lcsc": "C14663",
   "nets": {
    "1": "+3V3",
    "2": "GND"
@@ -351,7 +351,7 @@
  },
  "C8": {
   "fp": "Capacitor_SMD:C_0603_1608Metric",
-  "lcsc": "",
+  "lcsc": "C14663",
   "nets": {
    "1": "+3V3",
    "2": "GND"
@@ -361,7 +361,7 @@
  },
  "C9": {
   "fp": "Capacitor_SMD:C_0603_1608Metric",
-  "lcsc": "",
+  "lcsc": "C14663",
   "nets": {
    "1": "+3V3",
    "2": "GND"
@@ -381,7 +381,7 @@
  },
  "D2": {
   "fp": "LED_SMD:LED_0603_1608Metric",
-  "lcsc": "",
+  "lcsc": "C12624",
   "nets": {
    "1": "GND",
    "2": "D2_A"
@@ -391,7 +391,7 @@
  },
  "D3": {
   "fp": "LED_SMD:LED_0603_1608Metric",
-  "lcsc": "",
+  "lcsc": "C2287",
   "nets": {
    "1": "GND",
    "2": "D3_A"
@@ -401,7 +401,7 @@
  },
  "D4": {
   "fp": "LED_SMD:LED_0603_1608Metric",
-  "lcsc": "",
+  "lcsc": "C2286",
   "nets": {
    "1": "GND",
    "2": "D4_A"
@@ -411,7 +411,7 @@
  },
  "D5": {
   "fp": "Diode_SMD:D_SOD-323",
-  "lcsc": "",
+  "lcsc": "C7502694",
   "nets": {
    "1": "MCLR",
    "2": "MCLR_LV_B"
@@ -421,7 +421,7 @@
  },
  "F1": {
   "fp": "Fuse:Fuse_1206_3216Metric",
-  "lcsc": "",
+  "lcsc": "C720075",
   "nets": {
    "1": "VBUS",
    "2": "+5V"
@@ -454,7 +454,7 @@
  },
  "J2": {
   "fp": "Connector_PinSocket_2.54mm:PinSocket_1x08_P2.54mm_Horizontal",
-  "lcsc": "",
+  "lcsc": "C22436149",
   "nets": {
    "1": "ICSP_MCLR",
    "2": "TVDD",
@@ -470,7 +470,7 @@
  },
  "J3": {
   "fp": "Connector_PinHeader_1.27mm:PinHeader_1x03_P1.27mm_Vertical",
-  "lcsc": "",
+  "lcsc": "C22438100",
   "nets": {
    "1": "SWCLK",
    "2": "GND",
@@ -481,7 +481,7 @@
  },
  "L1": {
   "fp": "Inductor_SMD:L_Cenker_CKCS4030",
-  "lcsc": "",
+  "lcsc": "C354592",
   "nets": {
    "1": "+5V",
    "2": "SW"
@@ -524,7 +524,7 @@
  },
  "R1": {
   "fp": "Resistor_SMD:R_0603_1608Metric",
-  "lcsc": "",
+  "lcsc": "C23186",
   "nets": {
    "1": "CC1",
    "2": "GND"
@@ -534,17 +534,17 @@
  },
  "R10": {
   "fp": "Resistor_SMD:R_0603_1608Metric",
-  "lcsc": "",
+  "lcsc": "C23138",
   "nets": {
    "1": "+3V3",
    "2": "D2_A"
   },
   "uuid": "27363fe9-f31d-50ab-a877-5c83758cbaf2",
-  "value": "1k"
+  "value": "330"
  },
  "R11": {
   "fp": "Resistor_SMD:R_0603_1608Metric",
-  "lcsc": "",
+  "lcsc": "C23138",
   "nets": {
    "1": "LED_ACT",
    "2": "D3_A"
@@ -554,7 +554,7 @@
  },
  "R12": {
   "fp": "Resistor_SMD:R_0603_1608Metric",
-  "lcsc": "",
+  "lcsc": "C23138",
   "nets": {
    "1": "LED_ERR",
    "2": "D4_A"
@@ -564,7 +564,7 @@
  },
  "R2": {
   "fp": "Resistor_SMD:R_0603_1608Metric",
-  "lcsc": "",
+  "lcsc": "C23186",
   "nets": {
    "1": "CC2",
    "2": "GND"
@@ -574,7 +574,7 @@
  },
  "R20": {
   "fp": "Resistor_SMD:R_0603_1608Metric",
-  "lcsc": "",
+  "lcsc": "C22775",
   "nets": {
    "1": "PGC_B",
    "2": "ICSP_PGC"
@@ -584,7 +584,7 @@
  },
  "R21": {
   "fp": "Resistor_SMD:R_0603_1608Metric",
-  "lcsc": "",
+  "lcsc": "C25804",
   "nets": {
    "1": "PGC_DIR",
    "2": "GND"
@@ -594,7 +594,7 @@
  },
  "R22": {
   "fp": "Resistor_SMD:R_0603_1608Metric",
-  "lcsc": "",
+  "lcsc": "C22775",
   "nets": {
    "1": "PGD_B",
    "2": "ICSP_PGD"
@@ -604,7 +604,7 @@
  },
  "R23": {
   "fp": "Resistor_SMD:R_0603_1608Metric",
-  "lcsc": "",
+  "lcsc": "C25804",
   "nets": {
    "1": "PGD_DIR",
    "2": "GND"
@@ -614,7 +614,7 @@
  },
  "R24": {
   "fp": "Resistor_SMD:R_0603_1608Metric",
-  "lcsc": "",
+  "lcsc": "C22775",
   "nets": {
    "1": "AUX_B",
    "2": "ICSP_AUX"
@@ -624,7 +624,7 @@
  },
  "R25": {
   "fp": "Resistor_SMD:R_0603_1608Metric",
-  "lcsc": "",
+  "lcsc": "C25804",
   "nets": {
    "1": "AUX_DIR",
    "2": "GND"
@@ -634,7 +634,7 @@
  },
  "R26": {
   "fp": "Resistor_SMD:R_0603_1608Metric",
-  "lcsc": "",
+  "lcsc": "C22775",
   "nets": {
    "1": "TDI_B",
    "2": "ICSP_TDI"
@@ -644,7 +644,7 @@
  },
  "R27": {
   "fp": "Resistor_SMD:R_0603_1608Metric",
-  "lcsc": "",
+  "lcsc": "C25804",
   "nets": {
    "1": "TDI_DIR",
    "2": "GND"
@@ -654,7 +654,7 @@
  },
  "R28": {
   "fp": "Resistor_SMD:R_0603_1608Metric",
-  "lcsc": "",
+  "lcsc": "C22775",
   "nets": {
    "1": "TMS_B",
    "2": "ICSP_TMS"
@@ -664,7 +664,7 @@
  },
  "R29": {
   "fp": "Resistor_SMD:R_0603_1608Metric",
-  "lcsc": "",
+  "lcsc": "C25804",
   "nets": {
    "1": "TMS_DIR",
    "2": "GND"
@@ -674,7 +674,7 @@
  },
  "R3": {
   "fp": "Resistor_SMD:R_0603_1608Metric",
-  "lcsc": "",
+  "lcsc": "C25190",
   "nets": {
    "1": "USB_DP_C",
    "2": "USB_DP"
@@ -684,7 +684,7 @@
  },
  "R30": {
   "fp": "Resistor_SMD:R_0603_1608Metric",
-  "lcsc": "",
+  "lcsc": "C25803",
   "nets": {
    "1": "MCLR_LV_A",
    "2": "GND"
@@ -694,7 +694,7 @@
  },
  "R31": {
   "fp": "Resistor_SMD:R_0603_1608Metric",
-  "lcsc": "",
+  "lcsc": "C25804",
   "nets": {
    "1": "+3V3",
    "2": "MCLR_LV_DIR"
@@ -704,7 +704,7 @@
  },
  "R4": {
   "fp": "Resistor_SMD:R_0603_1608Metric",
-  "lcsc": "",
+  "lcsc": "C25190",
   "nets": {
    "1": "USB_DM_C",
    "2": "USB_DM"
@@ -714,7 +714,7 @@
  },
  "R40": {
   "fp": "Resistor_SMD:R_0603_1608Metric",
-  "lcsc": "",
+  "lcsc": "C25811",
   "nets": {
    "1": "VPP_RAW",
    "2": "VPP_FB"
@@ -724,7 +724,7 @@
  },
  "R41": {
   "fp": "Resistor_SMD:R_0603_1608Metric",
-  "lcsc": "",
+  "lcsc": "C25804",
   "nets": {
    "1": "VPP_FB",
    "2": "GND"
@@ -734,7 +734,7 @@
  },
  "R42": {
   "fp": "Resistor_SMD:R_0603_1608Metric",
-  "lcsc": "",
+  "lcsc": "C23254",
   "nets": {
    "1": "VPP_FB",
    "2": "VPP_DAC"
@@ -744,7 +744,7 @@
  },
  "R43": {
   "fp": "Resistor_SMD:R_0603_1608Metric",
-  "lcsc": "",
+  "lcsc": "C25804",
   "nets": {
    "1": "VPP_PWM",
    "2": "VPP_DAC"
@@ -754,7 +754,7 @@
  },
  "R44": {
   "fp": "Resistor_SMD:R_0603_1608Metric",
-  "lcsc": "",
+  "lcsc": "C25803",
   "nets": {
    "1": "BOOST_EN",
    "2": "GND"
@@ -764,7 +764,7 @@
  },
  "R45": {
   "fp": "Resistor_SMD:R_0603_1608Metric",
-  "lcsc": "",
+  "lcsc": "C25819",
   "nets": {
    "1": "VPP_RAW",
    "2": "GND"
@@ -774,7 +774,7 @@
  },
  "R46": {
   "fp": "Resistor_SMD:R_0603_1608Metric",
-  "lcsc": "",
+  "lcsc": "C25803",
   "nets": {
    "1": "VPP_RAW",
    "2": "VPP_SENSE"
@@ -784,7 +784,7 @@
  },
  "R47": {
   "fp": "Resistor_SMD:R_0603_1608Metric",
-  "lcsc": "",
+  "lcsc": "C31850",
   "nets": {
    "1": "VPP_SENSE",
    "2": "GND"
@@ -794,7 +794,7 @@
  },
  "R48": {
   "fp": "Resistor_SMD:R_0603_1608Metric",
-  "lcsc": "",
+  "lcsc": "C25804",
   "nets": {
    "1": "VPP_RAW",
    "2": "VPP_G"
@@ -804,7 +804,7 @@
  },
  "R49": {
   "fp": "Resistor_SMD:R_0603_1608Metric",
-  "lcsc": "",
+  "lcsc": "C25804",
   "nets": {
    "1": "VPP_G",
    "2": "VPP_GD"
@@ -814,7 +814,7 @@
  },
  "R5": {
   "fp": "Resistor_SMD:R_0603_1608Metric",
-  "lcsc": "",
+  "lcsc": "C25804",
   "nets": {
    "1": "+5V",
    "2": "VBUS_SENSE"
@@ -824,7 +824,7 @@
  },
  "R50": {
   "fp": "Resistor_SMD:R_0603_1608Metric",
-  "lcsc": "",
+  "lcsc": "C25803",
   "nets": {
    "1": "VPP_ON",
    "2": "GND"
@@ -834,7 +834,7 @@
  },
  "R51": {
   "fp": "Resistor_SMD:R_0603_1608Metric",
-  "lcsc": "",
+  "lcsc": "C25803",
   "nets": {
    "1": "MCLR_PD",
    "2": "GND"
@@ -844,7 +844,7 @@
  },
  "R52": {
   "fp": "Resistor_SMD:R_0603_1608Metric",
-  "lcsc": "",
+  "lcsc": "C22775",
   "nets": {
    "1": "MCLR",
    "2": "ICSP_MCLR"
@@ -854,7 +854,7 @@
  },
  "R53": {
   "fp": "Resistor_SMD:R_0603_1608Metric",
-  "lcsc": "",
+  "lcsc": "C22962",
   "nets": {
    "1": "VPP_SW",
    "2": "MCLR"
@@ -864,7 +864,7 @@
  },
  "R6": {
   "fp": "Resistor_SMD:R_0603_1608Metric",
-  "lcsc": "",
+  "lcsc": "C25804",
   "nets": {
    "1": "VBUS_SENSE",
    "2": "GND"
@@ -874,7 +874,7 @@
  },
  "R60": {
   "fp": "Resistor_SMD:R_0603_1608Metric",
-  "lcsc": "",
+  "lcsc": "C23206",
   "nets": {
    "1": "TVDD",
    "2": "VT_FB"
@@ -884,7 +884,7 @@
  },
  "R61": {
   "fp": "Resistor_SMD:R_0603_1608Metric",
-  "lcsc": "",
+  "lcsc": "C25804",
   "nets": {
    "1": "VT_FB",
    "2": "GND"
@@ -894,7 +894,7 @@
  },
  "R62": {
   "fp": "Resistor_SMD:R_0603_1608Metric",
-  "lcsc": "",
+  "lcsc": "C22809",
   "nets": {
    "1": "VT_FB",
    "2": "VT_DAC"
@@ -904,7 +904,7 @@
  },
  "R63": {
   "fp": "Resistor_SMD:R_0603_1608Metric",
-  "lcsc": "",
+  "lcsc": "C25804",
   "nets": {
    "1": "VT_PWM",
    "2": "VT_DAC"
@@ -914,7 +914,7 @@
  },
  "R64": {
   "fp": "Resistor_SMD:R_0603_1608Metric",
-  "lcsc": "",
+  "lcsc": "C25803",
   "nets": {
    "1": "VT_EN",
    "2": "GND"
@@ -924,7 +924,7 @@
  },
  "R65": {
   "fp": "Resistor_SMD:R_0603_1608Metric",
-  "lcsc": "",
+  "lcsc": "C25803",
   "nets": {
    "1": "TVDD",
    "2": "VT_ADC"
@@ -934,7 +934,7 @@
  },
  "R66": {
   "fp": "Resistor_SMD:R_0603_1608Metric",
-  "lcsc": "",
+  "lcsc": "C23231",
   "nets": {
    "1": "VT_ADC",
    "2": "GND"
@@ -944,7 +944,7 @@
  },
  "R7": {
   "fp": "Resistor_SMD:R_0603_1608Metric",
-  "lcsc": "",
+  "lcsc": "C21190",
   "nets": {
    "1": "XOUT",
    "2": "XOUT_X"
@@ -954,7 +954,7 @@
  },
  "R8": {
   "fp": "Resistor_SMD:R_0603_1608Metric",
-  "lcsc": "",
+  "lcsc": "C21190",
   "nets": {
    "1": "BOOT_R",
    "2": "GND"
@@ -964,7 +964,7 @@
  },
  "R9": {
   "fp": "Resistor_SMD:R_0603_1608Metric",
-  "lcsc": "",
+  "lcsc": "C25804",
   "nets": {
    "1": "+3V3",
    "2": "RUN"
@@ -974,7 +974,7 @@
  },
  "SW1": {
   "fp": "Button_Switch_SMD:SW_SPST_PTS810",
-  "lcsc": "",
+  "lcsc": "C221896",
   "nets": {
    "1": "QSPI_SS",
    "2": "BOOT_R"
@@ -984,7 +984,7 @@
  },
  "SW2": {
   "fp": "Button_Switch_SMD:SW_SPST_PTS810",
-  "lcsc": "",
+  "lcsc": "C221896",
   "nets": {
    "1": "RUN",
    "2": "GND"
@@ -1098,7 +1098,7 @@
  },
  "U10": {
   "fp": "Package_TO_SOT_SMD:SOT-23-6",
-  "lcsc": "",
+  "lcsc": "C7843",
   "nets": {
    "1": "+3V3",
    "2": "GND",
@@ -1125,7 +1125,7 @@
  },
  "U12": {
   "fp": "Package_TO_SOT_SMD:SOT-23-5",
-  "lcsc": "",
+  "lcsc": "C2877852",
   "nets": {
    "1": "+5V",
    "2": "GND",
@@ -1164,7 +1164,7 @@
  },
  "U4": {
   "fp": "Package_SO:SOIC-8_5.3x5.3mm_P1.27mm",
-  "lcsc": "",
+  "lcsc": "C131025",
   "nets": {
    "1": "QSPI_SS",
    "2": "QSPI_SD1",
@@ -1180,7 +1180,7 @@
  },
  "U5": {
   "fp": "Package_TO_SOT_SMD:SOT-23-6",
-  "lcsc": "",
+  "lcsc": "C7843",
   "nets": {
    "1": "+3V3",
    "2": "GND",
@@ -1194,7 +1194,7 @@
  },
  "U6": {
   "fp": "Package_TO_SOT_SMD:SOT-23-6",
-  "lcsc": "",
+  "lcsc": "C7843",
   "nets": {
    "1": "+3V3",
    "2": "GND",
@@ -1208,7 +1208,7 @@
  },
  "U7": {
   "fp": "Package_TO_SOT_SMD:SOT-23-6",
-  "lcsc": "",
+  "lcsc": "C7843",
   "nets": {
    "1": "+3V3",
    "2": "GND",
@@ -1222,7 +1222,7 @@
  },
  "U8": {
   "fp": "Package_TO_SOT_SMD:SOT-23-6",
-  "lcsc": "",
+  "lcsc": "C7843",
   "nets": {
    "1": "+3V3",
    "2": "GND",
@@ -1236,7 +1236,7 @@
  },
  "U9": {
   "fp": "Package_TO_SOT_SMD:SOT-23-6",
-  "lcsc": "",
+  "lcsc": "C7843",
   "nets": {
    "1": "+3V3",
    "2": "GND",
@@ -1250,7 +1250,7 @@
  },
  "Y1": {
   "fp": "Crystal:Crystal_SMD_3225-4Pin_3.2x2.5mm",
-  "lcsc": "C9002",
+  "lcsc": "C20625731",
   "nets": {
    "1": "XIN",
    "2": "GND",

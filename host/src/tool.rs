@@ -4,6 +4,7 @@
 use anyhow::{bail, Result};
 
 use crate::algo::Entry;
+use crate::board::{self, BoardLink};
 use crate::device::Device;
 use crate::pickit::{self, Gen4Link, PicKit, Setup};
 use crate::sim::SimPic;
@@ -29,7 +30,7 @@ pub struct Options {
 }
 
 pub enum Link {
-    Board(SerialLink),
+    Board(Box<BoardLink<SerialLink>>),
     PicKit(Box<Gen4Link<PicKit>>),
     Sim(Box<SimPic>),
 }
@@ -83,18 +84,9 @@ pub fn open(choice: Choice, device: &Device, opts: &Options) -> Result<Opened> {
     };
     match choice {
         Choice::Board => {
-            if opts.entry == Some(Entry::HighVoltage) {
-                bail!("la carte picflash n'a pas de VPP : seule l'entrée basse tension (LVP) est possible");
-            }
-            if opts.power_mv.is_some() {
-                bail!("la carte picflash n'alimente pas la cible");
-            }
             let link = SerialLink::open(opts.port.as_deref())?;
-            Ok(Opened {
-                link: Link::Board(link),
-                entry: Entry::LowVoltage,
-                summary: "carte picflash, entrée basse tension".into(),
-            })
+            let (link, entry, summary) = board::setup(link, device, opts.entry, opts.power_mv)?;
+            Ok(Opened { link: Link::Board(Box::new(link)), entry, summary })
         }
         Choice::PicKit => {
             let mut kit = PicKit::open(opts.port.as_deref())?;

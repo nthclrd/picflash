@@ -30,7 +30,7 @@ une autre), et `check_netlist.py` vérifie que chaque broche est sur le bon net.
 | VDD cible | U12 TLV75801, 1,5-4,86 V (limité par la chute du régulateur sous 5 V USB) | réglé par PWM sur FB, EN tiré à 0, mesuré sur ADC0 |
 | Connecteur | J2 8 broches | brochage PICkit 4/5 : 1 MCLR, 2 VDD, 3 GND, 4 PGD, 5 PGC, 6 AUX, 7 TDI, 8 TMS |
 
-## Brochage RP2040 (à reporter dans le firmware)
+## Brochage RP2040 (firmware : `firmware/src/hw_board.rs`)
 
 | GPIO | Signal | GPIO | Signal |
 |------|--------|------|--------|
@@ -58,15 +58,21 @@ DIR = 1 : RP2040 vers la cible ; DIR = 0 : la cible est lue (et haute impédance
 
 ## Points ouverts
 
-- Brochage J2 à recouper avec le guide utilisateur PICkit 4.
-- Références LCSC renseignées seulement quand elles sont connues ; les autres
-  (passifs, TLV75801, SN74LVC1T45, W25Q16JVSSIQ, LED, boutons, L1) sont à
-  choisir dans le catalogue JLCPCB.
-- Valeurs à valider : quartz (charge 15 pF), self 22 µH, stabilité du TLV758 et
-  du MT3608 avec l'injection PWM dans FB.
-- Le firmware actuel cible un Pi Pico (GP2/GP3/GP4) : il faut le porter sur ce
-  brochage et ajouter le pilotage VPP/VDD.
+- Valeurs à valider sur la première carte : self 22 µH, stabilité du TLV758 et
+  du MT3608 avec l'injection PWM dans FB (le firmware régule en boucle fermée).
+- C40 (22 µF X5R 25 V) ne garde qu'environ 5-8 µF à 14 V : suffisant pour
+  quelques mA de VPP, à surveiller.
+- Stock JLCPCB faible pour L1 (CKCS4030, quelques centaines) ; équivalents
+  4×4 mm possibles : C167883, C83472 (empreinte à recouper).
 - PCB : routé automatiquement, à relire à l'œil avant commande (voir ci-dessous).
+
+## Références JLCPCB
+
+Toutes les lignes de `fab/picflash-bom.csv` ont un numéro LCSC, vérifié le
+15/10/2026 dans le catalogue JLCPCB (type Basic/Extended et stock) ; le stock
+change, revérifier à la commande. Pièces Basic quand elles existent ; quartz
+ABM8-272-T3 (C20625731, charge 10 pF, celui du design de référence RP2040) pour
+aller avec C4/C5 à 15 pF. Table dans `tools/gen_schematic.py` (`LCSC`).
 
 ## PCB
 
@@ -94,7 +100,6 @@ isolement 0,2 mm, via 0,8/0,4 mm. Compatibles JLCPCB 4 couches.
 
 - Relire le routage dans KiCad : retour de masse sous l'USB, boucle du MT3608
   (SW, L1, D1, C40 courte), pistes VPP/MCLR.
-- Compléter les références LCSC manquantes de `fab/picflash-bom.csv`.
 - Vérifier les rotations du CPL dans l'aperçu JLCPCB (elles diffèrent
   parfois entre KiCad et leur bibliothèque).
 - Le connecteur J2 est traversant : assemblage THT JLCPCB ou soudure à la main.

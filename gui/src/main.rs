@@ -27,7 +27,7 @@ use picflash::toolchain::Diagnostic;
 use picflash::algo::Entry;
 use picflash::pickit;
 use picflash::tool::{self, Choice};
-use picflash::transport::{SerialLink, Transport};
+use picflash::transport::Transport;
 
 const WORDS_PER_ROW: usize = 8;
 const ERASED: u16 = 0x3FFF;
@@ -548,9 +548,14 @@ impl App {
                         None => Err(anyhow::anyhow!("pas de simulateur pour cette puce")),
                     }
                 }
-                Target::Board => SerialLink::open(port.as_deref()).and_then(|mut link| {
-                    run_job(job, &mut link, Entry::LowVoltage, &device, image.as_ref(), opts, &tx)
-                }),
+                Target::Board => {
+                    let tool_opts = tool::Options { port: port.clone(), ..tool_opts.clone() };
+                    tool::open(Choice::Board, &device, &tool_opts).and_then(|o| {
+                        send(Level::Info, o.summary);
+                        let mut link = o.link;
+                        run_job(job, &mut link, o.entry, &device, image.as_ref(), opts, &tx)
+                    })
+                }
                 Target::PicKit => tool::open(Choice::PicKit, &device, &tool_opts).and_then(|o| {
                     send(Level::Info, o.summary);
                     let mut link = o.link;
@@ -924,7 +929,7 @@ impl App {
             }
         });
 
-        if self.target != Target::Board {
+        {
             ui.horizontal(|ui| {
                 ui.label("Entrée");
                 let shown = match self.entry {
@@ -934,21 +939,22 @@ impl App {
                 };
                 egui::ComboBox::from_id_salt("entry").selected_text(shown).show_ui(ui, |ui| {
                     ui.selectable_value(&mut self.entry, EntryChoice::Auto, "auto")
-                        .on_hover_text("Haute tension sur PICkit 4/5 (comme MPLAB IPE), basse tension sinon");
+                        .on_hover_text("Haute tension sur carte picflash et PICkit 4/5 (comme MPLAB IPE), basse tension sinon");
                     ui.selectable_value(&mut self.entry, EntryChoice::Low, "basse tension (LVP)")
                         .on_hover_text("Clé « MCHP », MCLR à 0 V : demande LVP = ON dans la config");
                     ui.selectable_value(&mut self.entry, EntryChoice::High, "haute tension (VPP)")
-                        .on_hover_text("MCLR à 8,5-9 V : marche même si LVP = OFF (PICkit 4/5 seulement)");
+                        .on_hover_text("MCLR à VPP (9 V pour PIC16F1xxx) : marche même si LVP = OFF (carte picflash, PICkit 4/5)");
                 });
-                if self.target == Target::PicKit {
+                if matches!(self.target, Target::PicKit | Target::Board) {
                     ui.separator();
                     ui.checkbox(&mut self.power, "Alimenter la cible")
-                        .on_hover_text("Le PICkit 4/5 fournit VDD ; laisse décoché si la carte a sa propre alimentation");
+                        .on_hover_text("L'outil fournit VDD ; laisse décoché si la carte cible a sa propre alimentation");
                     ui.add_enabled_ui(self.power, |ui| {
                         egui::ComboBox::from_id_salt("vdd")
                             .selected_text(format!("{:.1} V", self.power_volts))
                             .show_ui(ui, |ui| {
-                                for v in [1.8f32, 3.3, 5.0] {
+                                let max = if self.target == Target::Board { 4.8f32 } else { 5.0 };
+                                for v in [1.8f32, 3.3, max] {
                                     ui.selectable_value(&mut self.power_volts, v, format!("{v:.1} V"));
                                 }
                             });
