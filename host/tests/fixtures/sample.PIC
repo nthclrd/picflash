@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Hand-written test sample in the device-pack .PIC schema, PIC16F1789 values. -->
+<edc:PIC xmlns:edc="http://crownking/edc" edc:arch="16Exxx" edc:name="PIC16F1789" edc:psid="40001457">
+  <edc:ProgrammingObject>
+    <edc:Programming edc:erasealgo="1">
+      <edc:ProgrammingWaitTime edc:progop="erase" edc:time="5" edc:timeunits="ms"/>
+      <edc:ProgrammingWaitTime edc:progop="pgm" edc:time="2500" edc:timeunits="us"/>
+      <edc:ProgrammingWaitTime edc:progop="cfg" edc:time="5000" edc:timeunits="us"/>
+      <edc:ProgrammingWaitTime edc:progop="rowerase"/>
+      <edc:ProgrammingRowSize edc:nzsize="32" edc:progop="pgm"/>
+      <edc:ProgrammingRowSize edc:nzsize="1" edc:progop="cfg"/>
+    </edc:Programming>
+    <edc:CodeSector edc:beginaddr="0x0" edc:endaddr="0x2000"/>
+    <edc:CodeSector edc:beginaddr="0x2000" edc:endaddr="0x4000"/>
+    <edc:UserIDSector edc:beginaddr="0x8000" edc:endaddr="0x8004"/>
+    <edc:DeviceIDSector edc:beginaddr="0x8006" edc:endaddr="0x8007" edc:mask="0x3fff" edc:value="0x302A"/>
+    <edc:ConfigFuseSector edc:beginaddr="0x8007" edc:endaddr="0x8009">
+      <edc:DCRDef edc:name="CONFIG1" edc:impl="0x3fff" edc:_addr="0x8007">
+        <edc:DCRModeList>
+          <edc:DCRMode edc:id="DS.0">
+            <edc:DCRFieldDef edc:cname="FOSC" edc:nzwidth="3"/>
+            <edc:DCRFieldDef edc:cname="REST" edc:nzwidth="11"/>
+          </edc:DCRMode>
+        </edc:DCRModeList>
+      </edc:DCRDef>
+      <edc:DCRDef edc:name="CONFIG2" edc:impl="0x3f23" edc:_addr="0x8008">
+        <edc:DCRModeList>
+          <edc:DCRMode edc:id="DS.0">
+            <edc:DCRFieldDef edc:cname="WRT" edc:nzwidth="2"/>
+            <edc:AdjustPoint edc:offset="3"/>
+            <edc:DCRFieldDef edc:cname="VCAPEN" edc:nzwidth="1"/>
+            <edc:AdjustPoint edc:offset="2"/>
+            <edc:DCRFieldDef edc:cname="PLLEN" edc:nzwidth="1"/>
+            <edc:DCRFieldDef edc:cname="STVREN" edc:nzwidth="1"/>
+            <edc:DCRFieldDef edc:cname="BORV" edc:nzwidth="1"/>
+            <edc:DCRFieldDef edc:cname="LPBOR" edc:nzwidth="1"/>
+            <edc:DCRFieldDef edc:cname="DEBUG" edc:nzwidth="1"/>
+            <edc:DCRFieldDef edc:cname="LVP" edc:nzwidth="1"/>
+          </edc:DCRMode>
+          <edc:DCRMode edc:id="DS.1">
+            <edc:DCRFieldDef edc:cname="LVP" edc:nzwidth="1"/>
+          </edc:DCRMode>
+        </edc:DCRModeList>
+      </edc:DCRDef>
+    </edc:ConfigFuseSector>
+    <edc:EEDataSector edc:beginaddr="0xF000" edc:endaddr="0xF100"/>
+  </edc:ProgrammingObject>
+  <edc:DataSpace edc:endaddr="0x1000"/>
+</edc:PIC>

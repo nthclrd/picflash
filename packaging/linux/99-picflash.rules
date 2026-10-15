@@ -1,0 +1,4 @@
+# picflash programmer board (pid.codes test ID): accessible to the logged-in user.
+SUBSYSTEM=="tty", ATTRS{idVendor}=="1209", ATTRS{idProduct}=="0001", MODE="0660", TAG+="uaccess"
+# Microchip PICkit 4 / PICkit 5 / PICkit Basic / MPLAB Snap, MPLAB mode (USB vendor class).
+SUBSYSTEM=="usb", ATTRS{idVendor}=="04d8", ATTRS{idProduct}=="9012|9018|9036|9054|9055|9056", MODE="0660", TAG+="uaccess"

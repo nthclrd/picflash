@@ -1,0 +1,7 @@
+[build]
+target = "thumbv6m-none-eabi"
+
+[target.thumbv6m-none-eabi]
+# Hold BOOTSEL while plugging the Pico in, then `cargo run --release`.
+runner = "elf2uf2-rs -d"
+rustflags = ["-C", "link-arg=--nmagic", "-C", "link-arg=-Tlink.x", "-C", "link-arg=-Tlink-rp.x"]

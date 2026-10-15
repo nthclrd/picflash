@@ -1,0 +1,29 @@
+[package]
+name = "picflash-gui"
+version = "0.1.0"
+edition.workspace = true
+license.workspace = true
+description = "Desktop interface for picflash (replaces the MPLAB IPE window)"
+
+[dependencies]
+picflash = { path = "../host" }
+anyhow = "1.0.104"
+eframe = "0.36.2"
+rfd = "0.17.2"
+serialport = { version = "4.10.1", default-features = false }
+
+[package.metadata.packager]
+product-name = "picflash"
+identifier = "io.github.picflash"
+description = "Programmeur PIC : compile un .asm, programme, vérifie et désassemble"
+category = "DeveloperTool"
+icons = ["../packaging/icons/32x32.png", "../packaging/icons/128x128.png", "../packaging/icons/128x128@2x.png", "../packaging/icons/picflash.icns", "../packaging/icons/picflash.ico"]
+before-packaging-command = "cargo build --release -p picflash-gui"
+out-dir = "../target/packages"
+binaries = [{ path = "picflash-gui", main = true }]
+
+[package.metadata.packager.macos]
+minimum-system-version = "11.0"
+
+[package.metadata.packager.deb]
+files = { "../packaging/linux/99-picflash.rules" = "lib/udev/rules.d/99-picflash.rules" }

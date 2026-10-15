@@ -1,0 +1,55 @@
+# Builds the picflash-gui installers on each OS. Runs on version tags
+# (v0.2.0...) or by hand from the Actions tab; installers are attached to the
+# run as artifacts.
+name: installeurs
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+jobs:
+  package:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: macos-arm64
+            os: macos-latest
+            formats: dmg
+            target: aarch64-apple-darwin
+          - name: macos-x86_64
+            os: macos-latest
+            formats: dmg
+            target: x86_64-apple-darwin
+          - name: windows-x86_64
+            os: windows-latest
+            formats: nsis
+            target: x86_64-pc-windows-msvc
+          - name: linux-x86_64
+            os: ubuntu-22.04
+            formats: deb,appimage
+            target: x86_64-unknown-linux-gnu
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+      - name: Linux system libraries
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y libgtk-3-dev libxkbcommon-dev libwayland-dev
+      - run: cargo test --workspace
+      - run: cargo install cargo-packager --locked --version 0.11.8
+      - run: cargo build --release -p picflash-gui --target ${{ matrix.target }}
+      - run: cargo packager --release --target ${{ matrix.target }} --formats ${{ matrix.formats }}
+        working-directory: gui
+      - uses: actions/upload-artifact@v4
+        with:
+          name: picflash-${{ matrix.name }}
+          path: |
+            target/packages/*.dmg
+            target/packages/*-setup.exe
+            target/packages/*.deb
+            target/packages/*.AppImage
+          if-no-files-found: error

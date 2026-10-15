@@ -1,0 +1,28 @@
+[package]
+name = "picflash-firmware"
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+
+[[bin]]
+name = "picflash-firmware"
+test = false
+bench = false
+
+[dependencies]
+picflash-protocol = { path = "../protocol" }
+embassy-rp = { version = "0.10.0", features = ["rp2040", "time-driver", "critical-section-impl"] }
+embassy-executor = { version = "0.10.0", features = ["platform-cortex-m", "executor-thread"] }
+embassy-time = "0.5.1"
+embassy-usb = "0.6.0"
+embassy-futures = "0.1.2"
+cortex-m = { version = "0.7.9", features = ["inline-asm"] }
+cortex-m-rt = "0.7.7"
+panic-halt = "1.0.0"
+portable-atomic = { version = "1.15.0", features = ["critical-section"] }
+
+[profile.release]
+debug = 2
+lto = true
+opt-level = "s"
+codegen-units = 1
