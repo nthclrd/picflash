@@ -1,3 +1,5 @@
 target/
 *.uf2
 .DS_Store
+hardware/build/
+__pycache__/
