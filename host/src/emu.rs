@@ -427,9 +427,6 @@ impl Cpu {
         if pops && self.stack.is_empty() {
             return Stop::StackUnderflow;
         }
-        if let Insn::Invalid(w) = insn {
-            return Stop::Invalid(w);
-        }
 
         let here = self.pc;
         let next = (here + 1) & PC_MASK;
@@ -485,19 +482,20 @@ impl Cpu {
                 let c = self.carry();
                 let zero = |r: u8| if r == 0 { Z } else { 0 };
                 let arith = |(r, flags): (u8, u8)| (r, C | DC | Z, flags, false);
+                let logic = |r: u8| (r, Z, zero(r), false);
                 // Result, STATUS bits affected, their new values, skip.
                 let (result, mask, flags, skip) = match op {
                     "addwf" => arith(add(v, w, 0)),
                     "addwfc" => arith(add(v, w, c)),
                     "subwf" => arith(add(v, !w, 1)),
                     "subwfb" => arith(add(v, !w, c)),
-                    "andwf" => (v & w, Z, zero(v & w), false),
-                    "iorwf" => (v | w, Z, zero(v | w), false),
-                    "xorwf" => (v ^ w, Z, zero(v ^ w), false),
-                    "comf" => (!v, Z, zero(!v), false),
-                    "decf" => (v.wrapping_sub(1), Z, zero(v.wrapping_sub(1)), false),
-                    "incf" => (v.wrapping_add(1), Z, zero(v.wrapping_add(1)), false),
-                    "movf" => (v, Z, zero(v), false),
+                    "andwf" => logic(v & w),
+                    "iorwf" => logic(v | w),
+                    "xorwf" => logic(v ^ w),
+                    "comf" => logic(!v),
+                    "decf" => logic(v.wrapping_sub(1)),
+                    "incf" => logic(v.wrapping_add(1)),
+                    "movf" => logic(v),
                     "decfsz" => (v.wrapping_sub(1), 0, 0, v == 1),
                     "incfsz" => (v.wrapping_add(1), 0, 0, v == 0xFF),
                     "rlf" => (v << 1 | c, C, v >> 7, false),

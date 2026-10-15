@@ -199,7 +199,7 @@ pub fn disassemble(flash: &BTreeMap<u32, u16>, device: &Device) -> Result<Vec<Li
     Ok(lines)
 }
 
-/// Where control can go after `insn` at `addr` (calls excluded).
+/// Where control can go after an instruction.
 enum Flow {
     Next,
     /// Skip instructions: next or the one after.
@@ -213,7 +213,7 @@ fn flow(insn: Insn, addr: u32, pclath: Option<u32>) -> Flow {
     match insn {
         Insn::Jump { op: "goto", k } => Flow::Jump(jump_target(addr, k, pclath)),
         Insn::Jump { k, .. } => Flow::Call(jump_target(addr, k, pclath)),
-        Insn::Bra(k) => Flow::Jump((addr as i64 + 1 + k as i64) as u32),
+        Insn::Bra(k) => Flow::Jump(bra_target(addr, k)),
         Insn::Plain("return" | "retfie" | "reset" | "brw") | Insn::Literal { op: "retlw", .. } => {
             Flow::Stop
         }
@@ -329,6 +329,10 @@ fn jump_target(addr: u32, k: u16, pclath: Option<u32>) -> u32 {
     page | k as u32
 }
 
+fn bra_target(addr: u32, k: i16) -> u32 {
+    (addr as i64 + 1 + k as i64) as u32
+}
+
 fn labels(flash: &BTreeMap<u32, u16>, wide: bool) -> BTreeMap<u32, String> {
     let mut calls = BTreeSet::new();
     let mut jumps = BTreeSet::new();
@@ -345,7 +349,7 @@ fn labels(flash: &BTreeMap<u32, u16>, wide: bool) -> BTreeMap<u32, String> {
                 }
             }
             Insn::Bra(k) => {
-                jumps.insert((addr as i64 + 1 + k as i64) as u32);
+                jumps.insert(bra_target(addr, k));
             }
             _ => {}
         }
@@ -402,7 +406,7 @@ fn format_insn(
         Insn::Bit { op, f, bit } => format!("{op} {}, {bit}", register(f, ctx, device)),
         Insn::Literal { op, k } => format!("{op} 0x{k:02X}"),
         Insn::Jump { op, k } => format!("{op} {}", target(jump_target(addr, k, ctx.pclath))),
-        Insn::Bra(k) => format!("bra {}", target((addr as i64 + 1 + k as i64) as u32)),
+        Insn::Bra(k) => format!("bra {}", target(bra_target(addr, k))),
         Insn::Movlb(k) => format!("movlb {k}"),
         Insn::Movlp(k) => format!("movlp 0x{k:02X}"),
         Insn::Addfsr { fsr, k } => format!("addfsr FSR{fsr}, {k}"),
