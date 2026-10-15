@@ -1,108 +1,52 @@
 # Carte picflash (RP2040)
 
-Design original tiré des datasheets publiques (RP2040 Hardware Design Guide,
-MT3608, TLV758, SN74LVC1T45). **Non testé, à relire avant fabrication.**
+Design original tiré des datasheets publiques (RP2040, MT3608, TLV758,
+SN74LVC1T45). **Non testé, à relire avant fabrication.**
 
-Le schéma KiCad 10 est généré par `tools/gen_schematic.py` : la netlist Python
-est la source de vérité, le `.kicad_sch` se régénère.
+## Générer
 
-```sh
-cd hardware/tools
-python3 gen_schematic.py     # écrit ../picflash-board.kicad_sch, netlist.json, parts.json
-python3 check_netlist.py     # netlist exportée par KiCad == spec
-cd ..
-K=/Applications/KiCad/KiCad.app/Contents/MacOS/kicad-cli
-$K sch erc picflash-board.kicad_sch            # 0 violation attendue
-$K sch export pdf -o build/picflash-board.pdf picflash-board.kicad_sch
-```
-
-Le générateur refuse toute collision géométrique (fil ou broche qui en touche
-une autre). `check_netlist.py` vérifie que chaque broche est sur le bon net.
-
-## Blocs
-
-| Bloc | Composants | Rôle |
-|------|------------|------|
-| USB | J1 USB-C, U2 USBLC6, F1 500 mA, R1/R2 5,1k | alimentation 5 V, données USB protégées |
-| 3,3 V | U3 AP2112K | logique |
-| MCU | U1 RP2040, U4 flash 16 Mbit, Y1 12 MHz, SW1 BOOTSEL, SW2 RESET, J3 SWD | |
-| Lignes ICSP | U5-U9 SN74LVC1T45 | 1,65-5,5 V côté cible ; DIR tiré à 0 = cible en haute impédance au démarrage |
-| VPP | U11 MT3608 (C43 en entrée), 6,7-13,9 V | réglé par PWM filtré injecté dans FB, mesuré sur ADC1 |
-| MCLR | Q1 (VPP via R53 220R), U10 + D5 (niveau VDD, LVP), Q3 (masse) | aucun actif = MCLR relâché |
-| VDD cible | U12 TLV75801, 1,5-4,86 V (limité par la chute du régulateur sous 5 V USB) | réglé par PWM sur FB, EN tiré à 0, mesuré sur ADC0 |
-| Connecteur | J2 8 broches | brochage PICkit 4/5 : 1 MCLR, 2 VDD, 3 GND, 4 PGD, 5 PGC, 6 AUX, 7 TDI, 8 TMS |
-
-## Brochage RP2040 (firmware : `firmware/src/hw_board.rs`)
-
-| GPIO | Signal | GPIO | Signal |
-|------|--------|------|--------|
-| 0/1 | DBG_TX / DBG_RX (TP1/TP2) | 13 | VPP_ON (Q1, actif haut) |
-| 2/3 | PGC / PGC_DIR | 14 | MCLR_PD (Q3, actif haut) |
-| 4/5 | PGD / PGD_DIR | 15 | BOOST_EN |
-| 6/7 | AUX / AUX_DIR | 16 | VPP_PWM (PWM0 A) |
-| 8/9 | TDI / TDI_DIR | 17 | VT_EN |
-| 10/11 | TMS / TMS_DIR | 18 | VT_PWM (PWM1 A) |
-| 12 | MCLR_LV (niveau VDD via U10/D5) | 20/21 | LED_ACT / LED_ERR |
-| 26 | ADC0 VT_ADC = TVDD × 68/168 | 27 | ADC1 VPP_SENSE = VPP × 22/122 |
-| 28 | ADC2 VBUS_SENSE = 5 V × 1/2 | | |
-
-DIR = 1 : RP2040 vers la cible ; DIR = 0 : la cible est lue (et haute impédance).
-
-## Règles pour le firmware
-
-- Ne jamais activer VPP_ON et MCLR_PD en même temps (R53 limite à ~60 mA).
-- PWM à 0 = tension max : 13,9 V pour VPP (beaucoup de PIC16 n'acceptent que
-  9 V), 4,86 V pour VDD. Fixer VPP_PWM avant BOOST_EN, VT_PWM avant VT_EN.
-- Avant VT_EN : vérifier sur ADC0 qu'aucune alimentation externe n'est
-  présente.
-- Avant VPP_ON : régler VPP en boucle fermée sur ADC1.
-
-## Points ouverts
-
-- Valeurs à valider sur la première carte : self 22 µH, stabilité du TLV758 et
-  du MT3608 avec l'injection PWM dans FB (le firmware régule en boucle fermée).
-- C40 (22 µF X5R 25 V) ne garde qu'environ 5-8 µF à 14 V : suffisant pour
-  quelques mA de VPP, à surveiller.
-- Stock JLCPCB faible pour L1 (CKCS4030, quelques centaines). Équivalents
-  4×4 mm possibles : C167883, C83472 (empreinte à recouper).
-
-## Références JLCPCB
-
-Toutes les lignes de `fab/picflash-bom.csv` ont un numéro LCSC, vérifié le
-15/10/2026 dans le catalogue JLCPCB (type Basic/Extended et stock). Le stock
-change : revérifier à la commande. Pièces Basic quand elles existent. Quartz
-ABM8-272-T3 (C20625731, charge 10 pF, celui du design de référence RP2040),
-assorti à C4/C5 de 15 pF. Table `LCSC` dans `tools/gen_schematic.py`.
-
-## PCB
-
-Carte 72 × 44 mm, 4 couches : F.Cu et B.Cu pour les signaux, In1 plan de
-masse et In2 plan +3,3 V pleins (déclarés « power » : l'autorouteur n'y passe
-pas). Composants sur une seule face pour l'assemblage JLCPCB.
+Le schéma et le PCB sont générés par les scripts de `tools/` : la netlist
+Python (`tools/gen_schematic.py`) est la source de vérité.
 
 ```sh
 make all FREEROUTING=/chemin/freerouting-2.4.1.jar
 ```
 
-| Étape | Outil | Résultat |
-|-------|-------|----------|
-| `schematic` | `tools/gen_schematic.py` + `tools/check_netlist.py` | schéma régénéré et vérifié (voir plus haut) |
-| `pcb` | `tools/gen_pcb.py` (pcbnew) | composants principaux placés par blocs, passifs près de leurs voisins, anneau libre autour du RP2040 ; via + piste courte vers les plans pour chaque pastille GND/+3V3 (`tools/fanout.py`) |
-| `route` | `tools/dsn_filter.py` + Freerouting 2.4.1 | signaux seulement (GND/+3V3 passent par les plans), 0 connexion non routée |
-| `finish` | `tools/finish_pcb.py` | import du routage, mêmes vias de plan rejoués à l'identique, plans de masse F/B, remplissage |
-| `check` | `kicad-cli` | ERC 0 ; DRC 0 erreur, 0 non connecté, 21 avertissements (sérigraphie rognée, broches non connectées) |
-| `fab` | `tools/export_fab.py` | `fab/` : Gerber + perçages (zip), BOM, CPL au format JLCPCB |
+Étapes : schéma généré et vérifié net par net, placement, routage automatique
+(Freerouting), plans de masse, ERC/DRC (0 erreur), puis `fab/` : Gerber,
+perçages, BOM et CPL au format JLCPCB. Chaque pièce de la BOM a un numéro LCSC
+(stock vérifié le 15/10/2026, à revérifier à la commande).
 
-Règles : piste 0,2 mm (0,1 mm mini en entrée de pastille), isolement 0,15 mm,
-via 0,6/0,3 mm ; classe « Power » (VBUS, +5V, TVDD, SW, VPP_RAW) en 0,4 mm,
-isolement 0,2 mm, via 0,8/0,4 mm. Compatibles JLCPCB 4 couches.
+Carte 72 × 44 mm, 4 couches (In1 masse, In2 +3,3 V), composants sur une face.
 
-### Avant de commander
+## Blocs
 
-Le PCB est routé automatiquement.
+| Bloc | Composants | Rôle |
+|------|------------|------|
+| USB | J1 USB-C, U2 USBLC6, F1 | alimentation 5 V, données protégées |
+| 3,3 V | U3 AP2112K | logique |
+| MCU | U1 RP2040, U4 flash, Y1 12 MHz | |
+| Lignes ICSP | U5-U9 SN74LVC1T45 | adaptation 1,65-5,5 V, haute impédance au démarrage |
+| VPP | U11 MT3608 | 6,7-13,9 V, réglé par PWM, mesuré sur ADC1 |
+| VDD cible | U12 TLV75801 | 1,5-4,86 V, réglé par PWM, mesuré sur ADC0 |
+| MCLR | Q1, U10 + D5, Q3 | VPP, niveau VDD ou masse |
+| Connecteur | J2 8 broches | brochage PICkit 4/5 |
 
-- Relire le routage dans KiCad : retour de masse sous l'USB, boucle du MT3608
-  (SW, L1, D1, C40 courte), pistes VPP/MCLR.
-- Vérifier les rotations du CPL dans l'aperçu JLCPCB (elles diffèrent
-  parfois entre KiCad et leur bibliothèque).
-- Le connecteur J2 est traversant : assemblage THT JLCPCB ou soudure à la main.
+Brochage GPIO : `firmware/src/hw_board.rs`.
+
+## Règles pour le firmware
+
+- Ne jamais activer VPP_ON et MCLR_PD en même temps.
+- PWM à 0 = tension max (13,9 V pour VPP) : fixer le PWM avant d'activer le
+  régulateur.
+- Avant d'alimenter la cible, vérifier sur ADC0 qu'aucune alimentation
+  externe n'est présente.
+
+## Avant de commander
+
+- Relire le routage automatique : masse sous l'USB, boucle du MT3608, pistes
+  VPP/MCLR.
+- Vérifier les rotations du CPL dans l'aperçu JLCPCB.
+- Valeurs à valider sur la première carte : self 22 µH, stabilité des
+  régulateurs avec l'injection PWM.
+- J2 est traversant : assemblage THT ou soudure à la main.
