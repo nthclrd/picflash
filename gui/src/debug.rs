@@ -10,10 +10,8 @@ use picflash::disasm::{Insn, Line};
 use picflash::emu::{Cpu, Stop};
 use picflash::image::Image;
 
-use crate::highlight;
+use crate::{highlight, GREEN, RED};
 
-const GREEN: Color32 = Color32::from_rgb(70, 200, 110);
-const RED: Color32 = Color32::from_rgb(225, 85, 85);
 const CURRENT: Color32 = Color32::from_rgba_premultiplied(60, 50, 10, 60);
 /// Instructions per frame when running flat out.
 const FAST_STEPS: u64 = 2_000_000;
@@ -121,15 +119,14 @@ impl Debugger {
             return;
         }
         let now = Instant::now();
-        let stop = match (self.real_time, self.last_frame) {
-            (true, prev) => {
-                // Cycles due since the last frame, capped so a stalled frame
-                // does not run a huge burst.
-                let elapsed = prev.map_or(0.0, |p| now.duration_since(p).as_secs_f64());
-                let due = (elapsed * self.fosc_mhz as f64 * 1e6 / 4.0) as u64;
-                self.run_cycles(due.min(FAST_STEPS))
-            }
-            (false, _) => self.run_cycles(FAST_STEPS),
+        let stop = if self.real_time {
+            // Cycles due since the last frame, capped so a stalled frame
+            // does not run a huge burst.
+            let elapsed = self.last_frame.map_or(0.0, |p| now.duration_since(p).as_secs_f64());
+            let due = (elapsed * self.fosc_mhz as f64 * 1e6 / 4.0) as u64;
+            self.run_cycles(due.min(FAST_STEPS))
+        } else {
+            self.run_cycles(FAST_STEPS)
         };
         self.last_frame = Some(now);
         self.describe(stop);
@@ -254,15 +251,7 @@ impl Debugger {
                     let arrow = if is_pc { "▶" } else { " " };
                     ui.label(RichText::new(arrow).monospace().color(GREEN));
                     ui.label(RichText::new(format!("{:04X}  {:04X}", line.addr, line.word)).monospace().color(dim));
-                    let label = line.label.as_deref().map_or(String::new(), |l| format!("{l}:"));
-                    ui.allocate_ui_with_layout(
-                        egui::vec2(120.0, row_height),
-                        egui::Layout::left_to_right(egui::Align::Center),
-                        |ui| {
-                            ui.set_min_width(120.0);
-                            ui.label(RichText::new(label).monospace().color(highlight::LABEL));
-                        },
-                    );
+                    highlight::label_column(ui, line.label.as_deref(), row_height);
                     ui.label(highlight::line(&line.text, &font, text, dim));
                 });
                 if is_pc {
