@@ -210,7 +210,7 @@ pub struct Setup {
 }
 
 /// One translated Gen4 script and where its results come from.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct Chunk {
     pub code: Vec<u8>,
     pub reads: Vec<Read>,
@@ -254,16 +254,12 @@ impl Chunk {
     }
 }
 
-fn le16(v: u16) -> [u8; 2] {
-    v.to_le_bytes()
-}
-
 /// Turns one bit-level script into Gen4 scripts of at most [`MAX_SCRIPT`]
 /// bytes.
 pub fn translate(script: &[u8], algo: Algorithm) -> Result<Vec<Chunk>> {
-    let gap = le16(GROUP_GAP_US as u16);
+    let gap = (GROUP_GAP_US as u16).to_le_bytes();
     let mut chunks = Vec::new();
-    let mut cur = Chunk { code: Vec::new(), reads: Vec::new() };
+    let mut cur = Chunk::default();
     let mut i = 0;
     while i < script.len() {
         let code = script[i];
@@ -336,7 +332,7 @@ pub fn translate(script: &[u8], algo: Algorithm) -> Result<Vec<Chunk>> {
 
         // One byte reserved for SET_UPLOAD.
         if cur.code.len() + bytes.len() + 1 > MAX_SCRIPT {
-            chunks.push(std::mem::replace(&mut cur, Chunk { code: Vec::new(), reads: Vec::new() }));
+            chunks.push(std::mem::take(&mut cur));
         }
         cur.code.extend_from_slice(&bytes);
         cur.reads.extend(read);
@@ -380,14 +376,12 @@ impl<G: Gen4> Transport for Gen4Link<G> {
                 self.tool.exec(&script, n * 2)?
             };
             ensure!(data.len() == n * 2, "expected {} bytes, got {}", n * 2, data.len());
-            if self.algo == Algorithm::Midrange8Bit
-                && data.as_chunks::<2>().0.contains(&[0xFF, 0xFF])
-            {
+            let words: Vec<u16> =
+                data.as_chunks::<2>().0.iter().map(|c| u16::from_le_bytes(*c)).collect();
+            if self.algo == Algorithm::Midrange8Bit && words.contains(&0xFFFF) {
                 // A real target never shifts out 16 ones: ICSPDAT floats.
                 bail!("lecture 0xFFFF : cible absente, non alimentée ou ICSPDAT non connecté");
             }
-            let words: Vec<u16> =
-                data.as_chunks::<2>().0.iter().map(|c| u16::from_le_bytes(*c)).collect();
             values.extend(chunk.values(&words));
         }
         Ok(values)
@@ -412,6 +406,11 @@ const TIMEOUT: Duration = Duration::from_secs(10);
 
 fn u32_at(buf: &[u8], at: usize) -> u32 {
     buf.get(at..at + 4).map_or(0, |b| u32::from_le_bytes([b[0], b[1], b[2], b[3]]))
+}
+
+/// mV to V, for messages.
+fn volts(mv: u16) -> f64 {
+    mv as f64 / 1000.0
 }
 
 /// Error names reported by the tool: firmware codes found by analysis, then
@@ -595,24 +594,20 @@ impl PicKit {
         let vdd = match setup.power_mv {
             Some(mv) => {
                 ensure!(self.kind.can_power(), "le {} ne peut pas alimenter la cible", self.kind.name());
-                ensure!(
-                    VDD_RANGE_MV.contains(&mv),
-                    "le PICkit fournit 1,5 à 5 V, pas {:.2} V",
-                    mv as f64 / 1000.0
-                );
+                ensure!(VDD_RANGE_MV.contains(&mv), "le PICkit fournit 1,5 à 5 V, pas {:.2} V", volts(mv));
                 // The firmware does not check: powering an already supplied
                 // board would fight its regulator.
                 if let Some(m) = measured {
-                    ensure!(m < 1000, "la cible est déjà alimentée ({:.2} V) : désactive l'alimentation par le PICkit", m as f64 / 1000.0);
+                    ensure!(m < 1000, "la cible est déjà alimentée ({:.2} V) : désactive l'alimentation par le PICkit", volts(m));
                 }
                 if p.vdd_max_mv != 0 {
                     ensure!(
                         (p.vdd_min_mv..=p.vdd_max_mv).contains(&mv),
                         "{:.2} V hors de la plage de {} ({:.2}-{:.2} V)",
-                        mv as f64 / 1000.0,
+                        volts(mv),
                         device.name,
-                        p.vdd_min_mv as f64 / 1000.0,
-                        p.vdd_max_mv as f64 / 1000.0
+                        volts(p.vdd_min_mv),
+                        volts(p.vdd_max_mv)
                     );
                 }
                 let mut s = vec![g4::POWER_SOURCE, 1, 0, 0, 0, g4::SET_VOLTAGES];
@@ -627,14 +622,14 @@ impl PicKit {
                 let low = (mv as i32 - 300).min(4400);
                 if (got as i32) < low || got as i32 > mv as i32 + 200 {
                     self.power_off()?;
-                    bail!("tension cible {:.2} V au lieu de {:.2} V : court-circuit ou consommation trop forte ?", got as f64 / 1000.0, mv as f64 / 1000.0);
+                    bail!("tension cible {:.2} V au lieu de {:.2} V : court-circuit ou consommation trop forte ?", volts(got), volts(mv));
                 }
                 Some(mv)
             }
             None => match measured {
                 Some(m) if m < 1800 => bail!(
                     "cible non alimentée ({:.2} V) : alimente-la ou active « Alimenter la cible »",
-                    m as f64 / 1000.0
+                    volts(m)
                 ),
                 m => m,
             },
@@ -645,9 +640,9 @@ impl PicKit {
             if setup.entry == Entry::LowVoltage && p.lvp_min_mv != 0 && v < p.lvp_min_mv {
                 bail!(
                     "{:.2} V est sous le seuil LVP de {} ({:.2} V) : monte VDD ou utilise la haute tension",
-                    v as f64 / 1000.0,
+                    volts(v),
                     device.name,
-                    p.lvp_min_mv as f64 / 1000.0
+                    volts(p.lvp_min_mv)
                 );
             }
             let vpp = match setup.entry {
@@ -656,7 +651,7 @@ impl PicKit {
                         VPP_RANGE_MV.contains(&p.vpp_mv),
                         "{} : VPP {:.2} V hors de la plage du PICkit (7,7-13,5 V)",
                         device.name,
-                        p.vpp_mv as f64 / 1000.0
+                        volts(p.vpp_mv)
                     );
                     p.vpp_mv
                 }
